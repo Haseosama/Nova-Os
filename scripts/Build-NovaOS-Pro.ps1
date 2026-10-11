@@ -5,9 +5,9 @@
 .SYNOPSIS
     Builds a local Windows 11 Pro ISO from the source media mounted on the PC.
 .DESCRIPTION
-    Keeps only source install.wim index 6 (Windows 11 Professional), applies a
-    conservative offline app/privacy/dark-mode profile, and adds a dark WinPE
-    welcome launcher that starts the original Microsoft Setup program.
+    Keeps only source install.wim index 6 (Windows 11 Professional), removes a
+    conservative set of provisioned apps, applies privacy/dark-mode defaults in
+    Windows specialize under SYSTEM, and adds a dark WinPE welcome launcher.
 
     The source media is read-only from this script's point of view. The script
     writes a separate working folder and output ISO. It does not automate disk
@@ -49,16 +49,6 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-
-function Set-NovaOfflineDword {
-    param(
-        [Parameter(Mandatory = $true)][string]$Key,
-        [Parameter(Mandatory = $true)][string]$Name,
-        [Parameter(Mandatory = $true)][int]$Value
-    )
-    $null = & reg.exe add $Key /v $Name /t REG_DWORD /d $Value /f 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "Échec de l'écriture du paramètre registre $Key\$Name." }
-}
 
 
 if ($PSVersionTable.PSEdition -ne 'Desktop') {
@@ -172,7 +162,7 @@ Write-Host ''
 Write-Host 'NovaOS — préparation du média Windows 11 Professionnel' -ForegroundColor Cyan
 Write-Host "Source monté : $sourceRoot"
 Write-Host "Édition sélectionnée : index 6 — $($selectedSourceImage.ImageName)"
-Write-Host "Actions : garder uniquement l'index 6, appliquer des réglages prudents, ajouter un lanceur WinPE sombre."
+Write-Host "Actions : index 6 uniquement, retrait ciblé d'applications, réglages pendant specialize, lanceur WinPE sombre."
 Write-Host "Le média source reste intact. Le partitionnement, l'activation et l'assistant Windows restent manuels."
 Write-Host "Espace libre requis : au moins $MinimumFreeSpaceGB Go."
 Write-Host "Sortie prévue : $OutputIso"
@@ -238,49 +228,8 @@ try {
         }
     }
 
-    $softwareHive = Join-Path $installMount 'Windows\System32\config\SOFTWARE'
-    if (-not (Test-Path -LiteralPath $softwareHive -PathType Leaf)) { throw 'Ruche SOFTWARE hors ligne introuvable.' }
-    $softwareMountName = 'HKLM\NOVAOS_SOFTWARE'
-    $null = & reg.exe load $softwareMountName $softwareHive 2>&1
-    if ($LASTEXITCODE -ne 0) { throw 'Impossible de charger la ruche SOFTWARE hors ligne.' }
-    try {
-        $machinePolicy = 'HKLM\NOVAOS_SOFTWARE\Policies\Microsoft\Windows'
-        # Pro/Home require diagnostic data; 1 is the lowest generally supported consumer level, not zero.
-        Set-NovaOfflineDword -Key "$machinePolicy\DataCollection" -Name 'AllowTelemetry' -Value 1
-        Set-NovaOfflineDword -Key "$machinePolicy\CloudContent" -Name 'DisableTailoredExperiencesWithDiagnosticData' -Value 1
-        Set-NovaOfflineDword -Key "$machinePolicy\CloudContent" -Name 'DisableWindowsConsumerFeatures' -Value 1
-        Set-NovaOfflineDword -Key "$machinePolicy\WindowsCopilot" -Name 'TurnOffWindowsCopilot' -Value 1
-        Set-NovaOfflineDword -Key "$machinePolicy\System" -Name 'EnableActivityFeed' -Value 0
-        Set-NovaOfflineDword -Key "$machinePolicy\System" -Name 'PublishUserActivities' -Value 0
-        Set-NovaOfflineDword -Key "$machinePolicy\System" -Name 'UploadUserActivities' -Value 0
-        Set-NovaOfflineDword -Key "$machinePolicy\Windows Search" -Name 'DisableWebSearch' -Value 1
-    } finally {
-        $null = & reg.exe unload $softwareMountName 2>&1
-        if ($LASTEXITCODE -ne 0) { Write-Warning "La ruche SOFTWARE n'a pas été déchargée normalement. Redémarrez avant de supprimer le dossier de travail." }
-    }
-
-    $defaultUserHive = Join-Path $installMount 'Users\Default\NTUSER.DAT'
-    if (Test-Path -LiteralPath $defaultUserHive -PathType Leaf) {
-        $defaultMountName = 'HKU\NOVAOS_DEFAULT'
-        $null = & reg.exe load $defaultMountName $defaultUserHive 2>&1
-        if ($LASTEXITCODE -ne 0) { throw 'Impossible de charger le profil utilisateur par défaut.' }
-        try {
-            $defaultSoftware = 'HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion'
-            Set-NovaOfflineDword -Key "$defaultSoftware\Themes\Personalize" -Name 'AppsUseLightTheme' -Value 0
-            Set-NovaOfflineDword -Key "$defaultSoftware\Themes\Personalize" -Name 'SystemUsesLightTheme' -Value 0
-            Set-NovaOfflineDword -Key "$defaultSoftware\AdvertisingInfo" -Name 'Enabled' -Value 0
-            Set-NovaOfflineDword -Key "$defaultSoftware\Explorer\Advanced" -Name 'TaskbarDa' -Value 0
-            Set-NovaOfflineDword -Key "$defaultSoftware\ContentDeliveryManager" -Name 'SystemPaneSuggestionsEnabled' -Value 0
-            Set-NovaOfflineDword -Key "$defaultSoftware\ContentDeliveryManager" -Name 'SubscribedContent-338388Enabled' -Value 0
-            Set-NovaOfflineDword -Key "$defaultSoftware\ContentDeliveryManager" -Name 'SubscribedContent-338389Enabled' -Value 0
-            Set-NovaOfflineDword -Key "$defaultSoftware\ContentDeliveryManager" -Name 'SubscribedContent-353694Enabled' -Value 0
-        } finally {
-            $null = & reg.exe unload $defaultMountName 2>&1
-            if ($LASTEXITCODE -ne 0) { Write-Warning "La ruche utilisateur par défaut n'a pas été déchargée normalement." }
-        }
-    } else {
-        Write-Warning "NTUSER.DAT du profil par défaut introuvable ; le thème sombre sera à activer après l'installation."
-    }
+    # Machine policies and default-user visual settings are applied later in the
+    # Windows specialize pass, where Setup runs with SYSTEM privileges.
 
     Dismount-WindowsImage -Path $installMount -Save -CheckIntegrity | Out-Null
     $installMounted = $false
@@ -413,6 +362,40 @@ Retail
 0
 '@ | Set-Content -LiteralPath $eiCfg -Encoding ASCII
 
+    $oemScriptsDir = Join-Path $stagingMedia 'sources\$OEM$\$$\Setup\Scripts'
+    New-Item -ItemType Directory -Path $oemScriptsDir -Force | Out-Null
+    $configureScript = Join-Path $oemScriptsDir 'NovaOS-Configure.cmd'
+    @'
+@echo off
+setlocal
+set "LOG=%WINDIR%\Temp\NovaOS-Configure.log"
+echo NovaOS specialize settings > "%LOG%"
+rem AllowTelemetry=1 is the minimum generally supported on Pro, not zero telemetry.
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowTelemetry /t REG_DWORD /d 1 /f >> "%LOG%" 2>&1
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableTailoredExperiencesWithDiagnosticData /t REG_DWORD /d 1 /f >> "%LOG%" 2>&1
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f >> "%LOG%" 2>&1
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >> "%LOG%" 2>&1
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableActivityFeed /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v PublishUserActivities /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v UploadUserActivities /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v DisableWebSearch /t REG_DWORD /d 1 /f >> "%LOG%" 2>&1
+reg.exe load HKU\NOVAOS_DEFAULT "%SystemDrive%\Users\Default\NTUSER.DAT" >> "%LOG%" 2>&1
+if errorlevel 1 (
+  echo Default user hive could not be loaded; skipping per-user defaults. >> "%LOG%"
+  exit /b 0
+)
+reg.exe add "HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v AppsUseLightTheme /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v SystemUsesLightTheme /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" /v Enabled /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SystemPaneSuggestionsEnabled /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338388Enabled /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-338389Enabled /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe add "HKU\NOVAOS_DEFAULT\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v SubscribedContent-353694Enabled /t REG_DWORD /d 0 /f >> "%LOG%" 2>&1
+reg.exe unload HKU\NOVAOS_DEFAULT >> "%LOG%" 2>&1
+exit /b 0
+'@ | Set-Content -LiteralPath $configureScript -Encoding ASCII
+
     $localeData = @{
         'fr-FR' = @{ Input = '040c:0000040c' }
         'en-US' = @{ Input = '0409:00000409' }
@@ -422,8 +405,8 @@ Retail
     $answerFile = Join-Path $stagingMedia 'autounattend.xml'
     @"
 <?xml version="1.0" encoding="utf-8"?>
-<unattend xmlns="urn:schemas-microsoft-com:unattend">
-  <!-- NovaOS: préremplit langue et clavier uniquement. Aucune partition ni compte n’est automatisé. -->
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+  <!-- NovaOS: prefill language and keyboard; no disk, activation, or account automation. -->
   <settings pass="windowsPE">
     <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
       <SetupUILanguage><UILanguage>$UILanguage</UILanguage></SetupUILanguage>
@@ -431,6 +414,18 @@ Retail
       <SystemLocale>$UILanguage</SystemLocale>
       <UILanguage>$UILanguage</UILanguage>
       <UserLocale>$UILanguage</UserLocale>
+    </component>
+  </settings>
+  <settings pass="specialize">
+    <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <RunSynchronous>
+        <RunSynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <Description>Apply NovaOS machine policies and dark defaults</Description>
+          <Path>cmd.exe /c if exist &quot;%WINDIR%\Setup\Scripts\NovaOS-Configure.cmd&quot; call &quot;%WINDIR%\Setup\Scripts\NovaOS-Configure.cmd&quot;</Path>
+          <WillReboot>Never</WillReboot>
+        </RunSynchronousCommand>
+      </RunSynchronous>
     </component>
   </settings>
   <settings pass="oobeSystem">
