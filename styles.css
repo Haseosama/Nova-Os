@@ -317,6 +317,13 @@ button:focus-visible, select:focus-visible, .dropzone:focus-visible { outline: 2
 .installer-note strong { color: #c4d8be; font-weight: 650; }
 .note-icon { display: grid; place-items: center; width: 25px; height: 25px; flex: 0 0 auto; border-radius: 7px; background: rgba(var(--accent-rgb),.09); color: var(--accent); }
 .note-icon .icon { width: 14px; height: 14px; }
+.local-script-link { display: flex; align-items: center; gap: 10px; margin-top: 9px; padding: 10px 11px; border: 1px solid rgba(var(--accent-rgb),.2); border-radius: 7px; background: rgba(var(--accent-rgb),.035); color: var(--accent); text-decoration: none; transition: border-color .18s, background .18s, transform .18s; }
+.local-script-link:hover { border-color: rgba(var(--accent-rgb),.45); background: rgba(var(--accent-rgb),.075); transform: translateY(-1px); }
+.local-script-link > .icon { width: 15px; height: 15px; flex: 0 0 auto; }
+.local-script-link > span { display: grid; min-width: 0; flex: 1; gap: 4px; }
+.local-script-link strong { color: #d8e7d2; font-size: 8px; font-weight: 700; }
+.local-script-link small { color: #85968b; font-size: 7px; }
+.local-script-link .link-arrow { color: #9abf86; }
 
 .history-section { padding-bottom: 15px; }
 .panel-heading-history { margin-bottom: 13px; }

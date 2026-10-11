@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d13">
-  <meta name="description" content="NovaOS Studio — préparez localement un kit de personnalisation Windows.">
+  <meta name="description" content="NovaOS Studio — personnalisation locale de Windows 11 Pro et lanceur WinPE sombre.">
   <title>NovaOS Studio — Image Builder</title>
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
@@ -224,7 +224,7 @@
             <section class="panel-section" id="installer" aria-labelledby="installerTitle">
               <div class="panel-heading">
                 <div class="step-badge">04</div>
-                <div class="panel-title-wrap"><div class="section-eyebrow">EXPÉRIENCE DE DÉPLOIEMENT</div><h2 id="installerTitle">Préparez l’installation</h2><p>Réglez la langue et l’apparence appliquées au premier démarrage.</p></div>
+                <div class="panel-title-wrap"><div class="section-eyebrow">EXPÉRIENCE DE DÉPLOIEMENT</div><h2 id="installerTitle">Préparez l’installation</h2><p>Un lanceur NovaOS dans WinPE, puis l’installation Windows 11 Pro (index 6).</p></div>
                 <span class="panel-status panel-status-configured"><span class="status-hollow"></span> PERSONNALISABLE</span>
               </div>
               <div class="installer-card">
@@ -249,13 +249,14 @@
                   <div class="preview-caption"><span>APERÇU DE L’EXPÉRIENCE</span><span class="preview-live"><i></i> EN DIRECT</span></div>
                   <div class="installer-preview" id="installerPreview">
                     <div class="preview-topline"><span class="preview-brand"><i></i> NOVA<span>OS</span></span><span class="preview-dots"><i></i><i></i><i></i></span></div>
-                    <div class="preview-center"><div class="preview-orbit"><svg viewBox="0 0 44 44" fill="none"><path d="m9 32 13-23 13 23M14 23h22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="preview-step">01 — CONFIGURATION TERMINÉE</span><strong>Votre espace.<br>Vos règles.</strong><span class="preview-subtitle">Bienvenue dans NovaOS.</span><span class="preview-progress"><i></i></span></div>
-                    <div class="preview-footer"><span>PRÊT POUR LE PREMIER DÉMARRAGE</span><span>24H2 <i>·</i> X64</span></div>
+                    <div class="preview-center"><div class="preview-orbit"><svg viewBox="0 0 44 44" fill="none"><path d="m9 32 13-23 13 23M14 23h22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="preview-step">00 — LANCEUR WINPE NOVAOS</span><strong>Windows 11 Pro<br>prêt à installer.</strong><span class="preview-subtitle">Setup Microsoft reste le moteur d’installation.</span><span class="preview-progress"><i></i></span></div>
+                    <div class="preview-footer"><span>AVANT WINDOWS SETUP</span><span>PRO <i>·</i> X64</span></div>
                   </div>
-                  <p class="preview-disclaimer">Le thème s’applique au bureau Windows après l’installation. L’écran natif de Windows Setup ne peut pas être redessiné par ce kit.</p>
+                  <p class="preview-disclaimer">Le lanceur NovaOS s’affiche avant Windows Setup. Les écrans natifs de choix du disque et d’installation restent ceux de Microsoft.</p>
                 </div>
               </div>
-              <div class="installer-note"><span class="note-icon"><svg class="icon"><use href="#i-sun"/></svg></span><span><strong>Une installation qui reste à vous.</strong> Le kit préconfigure la langue et les préférences visuelles. Il ne contourne pas l’activation, le compte Microsoft ni les exigences matérielles de Windows.</span></div>
+              <div class="installer-note"><span class="note-icon"><svg class="icon"><use href="#i-sun"/></svg></span><span><strong>Une installation qui reste à vous.</strong> Un écran d’accueil NovaOS sombre démarre dans WinPE, puis lance le Setup Microsoft. Le disque, l’activation et les exigences matérielles restent gérés par Windows.</span></div>
+              <a class="local-script-link" href="scripts/Build-NovaOS-Pro.ps1" download><svg class="icon"><use href="#i-download"/></svg><span><strong>Préparer l’ISO Windows 11 Pro en local</strong><small>Script PowerShell · index 6 · nécessite Windows ADK + WinPE</small></span><svg class="icon link-arrow"><use href="#i-arrow"/></svg></a>
             </section>
 
             <section class="panel-section history-section" id="builds" aria-labelledby="historyTitle">
@@ -309,7 +310,8 @@
       <div class="modal-icon"><svg class="icon"><use href="#i-spark"/></svg></div>
       <div class="section-eyebrow">À SAVOIR AVANT L’EXPORT</div>
       <h2 id="modalTitle">Un kit, pas un ISO reconstruit.</h2>
-      <p>NovaOS Studio prépare un ZIP avec votre profil JSON, un script PowerShell relisible et un fichier de réponse limité à la langue et au clavier. Le navigateur ne monte pas et ne modifie pas le contenu du fichier ISO.</p>
+      <p>L’export ZIP de cette interface contient votre profil JSON, un script PowerShell de préférences et un fichier de réponse de langue/clavier. Le navigateur ne monte pas et ne modifie pas le contenu de l’ISO.</p>
+      <p>Pour reconstruire localement l’ISO Windows 11 Pro (index 6) avec un écran d’accueil sombre dans WinPE, téléchargez le script du panneau Installateur. Il exige Windows ADK et doit être testé dans une machine virtuelle.</p>
       <div class="modal-callout"><svg class="icon"><use href="#i-shield"/></svg><span><strong>Gardez la main.</strong> Vérifiez chaque fichier avant de l’exécuter. Les paramètres Windows varient selon la version, l’édition et les stratégies de votre organisation.</span></div>
       <p class="modal-last">Pour reconstruire réellement un ISO, il faut ensuite intégrer ce kit à un flux Windows avec DISM et les outils Windows ADK. Certaines données de diagnostic sont obligatoires selon l’édition ; aucune configuration ne peut garantir leur suppression totale.</p>
       <button class="button button-primary modal-action" id="modalDone" type="button">J’ai compris <svg class="icon"><use href="#i-check"/></svg></button>
