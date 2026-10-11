@@ -190,6 +190,11 @@ try {
         throw "L'export de l'image avec DISM a échoué : $($_.Exception.Message)"
     }
 
+    foreach ($wimPath in @($stagedInstallWim, $stagedBootWim)) {
+        $wimFile = Get-Item -LiteralPath $wimPath -ErrorAction Stop
+        if ($wimFile.IsReadOnly) { $wimFile.IsReadOnly = $false }
+    }
+
     Write-Host '3/5 — Maintenance de Windows 11 Pro (index de sortie 1)...' -ForegroundColor Cyan
     Mount-WindowsImage -ImagePath $stagedInstallWim -Index 1 -Path $installMount -CheckIntegrity | Out-Null
     $installMounted = $true
