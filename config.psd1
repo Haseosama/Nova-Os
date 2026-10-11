@@ -67,6 +67,17 @@
         Enabled     = $true
         AccentColor = '#00D4FF'                  # cyan neon ; essaie '#FF2BD6' pour du rose
         Wallpaper   = 'assets\wallpaper.jpg'    # remplace par ton image (JPG) si tu veux
+
+        # Style "liquid glass" : barre des taches plus transparente et effets de verre natifs.
+        GlassEffects = $true
+
+        # Applis installees avec winget a la premiere connexion (Internet requis) pour pousser
+        # l'effet verre : TranslucentTB (barre des taches en verre) et Mica For Everyone
+        # (fond flou acrylique sur les fenetres). Vide la liste pour ne rien installer.
+        GlassApps = @(
+            'CharlesMilette.TranslucentTB'
+            'MicaForEveryone.MicaForEveryone'
+        )
     }
 
     # --- Optimisations jeux ----------------------------------------------

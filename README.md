@@ -29,6 +29,8 @@ Tout est réglable dans [`config.psd1`](config.psd1) (mets `$false` pour désact
 | `RemoveOneDrive` | oui | OneDrive ne s'installe plus à la première connexion. |
 | `RemoveEdge` | non | Supprime Edge. Désactivé par défaut car certaines applis dépendent de WebView2. |
 | `Theme` | oui | Mode sombre, transparence, accent cyan néon (`AccentColor`), fond d'écran Nova-Os sur le bureau et l'écran de verrouillage. Mets ta propre image dans `Wallpaper` si tu veux. |
+| `Theme.GlassEffects` | oui | Style « liquid glass » : barre des tâches plus transparente, effets de verre natifs. |
+| `Theme.GlassApps` | TranslucentTB, Mica For Everyone | Installées automatiquement (winget) à la première connexion, si Internet est disponible : barre des tâches en verre et fond acrylique flou sur les fenêtres. Leurs réglages se changent dans leurs propres paramètres. Journal : `%LOCALAPPDATA%\NovaOS-FirstLogon.log`. |
 | `GamingTweaks` | oui | Mode Jeu actif, enregistrement Game DVR coupé, planification GPU matérielle, priorité CPU/GPU aux jeux, souris sans accélération. |
 | `UltimatePerformance` | oui | Active le mode d'alimentation « Performances optimales » au premier démarrage (moins d'autonomie sur portable). |
 | `DisableVBS` | non | Coupe l'intégrité de la mémoire : quelques FPS en plus, mais moins de protection. À activer en connaissance de cause. |

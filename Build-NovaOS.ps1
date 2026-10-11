@@ -231,6 +231,46 @@ function Set-ThemeRegistry($Theme, [bool] $HasDefaultUser) {
     Set-Reg 'NOVA_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent' 'StartColorMenu' $abgr
     Set-RegString 'NOVA_DEFAULT\Control Panel\Desktop' 'WallPaper' $wallpaper
     Set-RegString 'NOVA_DEFAULT\Control Panel\Desktop' 'WallpaperStyle' '10'
+
+    if ($Theme.GlassEffects) {
+        # Barre des taches plus transparente (effet verre).
+        Set-Reg 'NOVA_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' 'UseOLEDTaskbarTransparency' 1
+        Set-Reg 'NOVA_SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced' 'UseOLEDTaskbarTransparency' 1
+    }
+
+    if ($Theme.GlassApps.Count -gt 0) {
+        # Lance le script d'installation des applis "verre" a la premiere connexion de chaque utilisateur.
+        Set-RegString 'NOVA_DEFAULT\Software\Microsoft\Windows\CurrentVersion\RunOnce' 'NovaOSGlass' `
+            "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File C:\$NovaDirInImage\FirstLogon.ps1"
+    }
+}
+
+function Install-FirstLogonScript([string] $ImageRoot, $Theme) {
+    if ($Theme.GlassApps.Count -eq 0) { return }
+    $ids = ($Theme.GlassApps | ForEach-Object { "'$_'" }) -join ', '
+    @"
+# Nova-Os : installation des applis "liquid glass" a la premiere connexion.
+`$ids = @($ids)
+Start-Transcript -Path "`$env:LOCALAPPDATA\NovaOS-FirstLogon.log" -Append | Out-Null
+
+# Sur une installation neuve, winget et Internet peuvent mettre quelques minutes a etre prets.
+for (`$i = 0; `$i -lt 60; `$i++) {
+    if ((Get-Command winget -ErrorAction SilentlyContinue) -and (Test-Connection 8.8.8.8 -Count 1 -Quiet)) { break }
+    Start-Sleep -Seconds 10
+}
+
+foreach (`$id in `$ids) {
+    winget install --id `$id --exact --silent --accept-package-agreements --accept-source-agreements
+}
+
+# Demarre les applis installees pour que l'effet s'applique tout de suite.
+foreach (`$name in 'TranslucentTB', 'Mica For Everyone') {
+    Get-StartApps -Name `$name | Select-Object -First 1 | ForEach-Object {
+        Start-Process "shell:AppsFolder\`$(`$_.AppID)"
+    }
+}
+Stop-Transcript | Out-Null
+"@ | Set-Content (Join-Path $ImageRoot "$NovaDirInImage\FirstLogon.ps1") -Encoding UTF8
 }
 
 # ---------------------------------------------------------------------------
@@ -433,6 +473,7 @@ try {
     if ($config.Theme.Enabled) {
         Write-Step 'Copie du theme Nova-Os'
         Install-ThemeFiles $mountDir $config.Theme
+        Install-FirstLogonScript $mountDir $config.Theme
     }
     Install-FirstBootScript $mountDir $config
 
