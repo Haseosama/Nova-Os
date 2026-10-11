@@ -444,6 +444,7 @@ function New-Autounattend([string] $Path, [string] $Arch, $Config) {
     $specialize = ''
     $oobe = ''
     $themes = ''
+    $commands = @()
     if ($Config.BypassHardwareChecks) {
         # Ecrit LabConfig dans le programme d'installation avant ses verifications materielles.
         $order = 0
@@ -456,13 +457,26 @@ function New-Autounattend([string] $Path, [string] $Arch, $Config) {
         </RunSynchronousCommand>
 "@
         }
+    }
+    $userData = ''
+    if ($Config.InstallKey) {
+        # Cle generique : passe l'ecran "cle de produit" sans activer Windows.
+        $userData = @"
+      <UserData>
+        <AcceptEula>true</AcceptEula>
+        <ProductKey>
+          <Key>$($Config.InstallKey)</Key>
+          <WillShowUI>OnError</WillShowUI>
+        </ProductKey>
+      </UserData>
+"@ + "`n"
+    }
+    if ($commands -or $userData) {
+        $runSync = if ($commands) { "      <RunSynchronous>`n$($commands -join "`n")`n      </RunSynchronous>`n" } else { '' }
         $windowsPE = @"
   <settings pass="windowsPE">
     <component name="Microsoft-Windows-Setup" $component>
-      <RunSynchronous>
-$($commands -join "`n")
-      </RunSynchronous>
-    </component>
+$runSync$userData    </component>
   </settings>
 "@ + "`n"
     }
@@ -717,7 +731,7 @@ try {
         Update-SetupBackgrounds $sources (Resolve-Asset $config.Theme.SetupBackground)
     }
 
-    if ($config.AllowLocalAccount -or $config.Theme.Enabled -or $config.BypassHardwareChecks) {
+    if ($config.AllowLocalAccount -or $config.Theme.Enabled -or $config.BypassHardwareChecks -or $config.InstallKey) {
         Write-Step 'Ajout de autounattend.xml'
         New-Autounattend (Join-Path $isoDir 'autounattend.xml') $arch $config
     }

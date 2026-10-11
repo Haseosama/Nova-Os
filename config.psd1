@@ -36,6 +36,11 @@
     )
     # Conserves volontairement : Store, Calculatrice, Photos, Bloc-notes, Terminal, Paint, Capture d'ecran.
 
+    # Cle d'installation generique publique de Microsoft (Windows 11 Pro) : elle evite l'ecran
+    # "cle de produit" pendant l'installation mais N'ACTIVE PAS Windows. Mets '' pour la retirer,
+    # ou la cle generique de ton edition si tu gardes une autre edition que Pro.
+    InstallKey = 'VK7JG-NPHTM-C97JM-9MPGT-3V66T'
+
     # Installation sur PC sans TPM 2.0 / Secure Boot / 4 Go de RAM / CPU supporte.
     BypassHardwareChecks   = $true
 
