@@ -199,7 +199,7 @@ function Update-SetupBackgrounds([string] $Dir, [string] $Image) {
         $g.DrawImage($src, ($w - $dw) / 2, ($h - $dh) / 2, $dw, $dh)
         $g.Dispose(); $src.Dispose()
 
-        takeown /f $file.FullName | Out-Null
+        takeown /f $file.FullName /a | Out-Null
         icacls $file.FullName /grant '*S-1-5-32-544:F' /q | Out-Null
         $file.IsReadOnly = $false
         $format = if ($file.Extension -eq '.png') { [System.Drawing.Imaging.ImageFormat]::Png } else { [System.Drawing.Imaging.ImageFormat]::Bmp }
@@ -339,19 +339,42 @@ function Set-GamingTweaks([bool] $HasDefaultUser) {
     Set-RegString 'NOVA_DEFAULT\Control Panel\Mouse' 'MouseThreshold2' '0'
 }
 
-function Install-FirstBootScript([string] $ImageRoot, $Config) {
-    if (-not $Config.UltimatePerformance) { return }
+# SetupComplete.cmd est execute par Windows a la fin de l'installation, avant la premiere connexion.
+function Install-FirstBootScript([string] $ImageRoot, $Config, [bool] $DeferAppRemoval) {
+    $lines = @('@echo off')
+
+    if ($DeferAppRemoval) {
+        # DISM n'a pas pu lire les applis de l'image (build Insider plus recent que DISM) :
+        # on les retire depuis le Windows installe, ou la liste est lisible.
+        $novaDir = Join-Path $ImageRoot $NovaDirInImage
+        New-Item -ItemType Directory -Force -Path $novaDir | Out-Null
+        $patterns = ($Config.RemoveApps | ForEach-Object { "'$_'" }) -join ', '
+        @"
+`$patterns = @($patterns)
+Start-Transcript -Path "`$env:WINDIR\NovaOS\RemoveApps.log" -Append | Out-Null
+`$provisioned = Get-AppxProvisionedPackage -Online
+foreach (`$pattern in `$patterns) {
+    `$provisioned | Where-Object PackageName -like "*`$pattern*" | ForEach-Object {
+        Write-Output "Suppression de `$(`$_.DisplayName)"
+        Remove-AppxProvisionedPackage -Online -PackageName `$_.PackageName -ErrorAction Continue | Out-Null
+    }
+}
+Stop-Transcript | Out-Null
+"@ | Set-Content (Join-Path $novaDir 'RemoveApps.ps1') -Encoding UTF8
+        $lines += 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File %WINDIR%\NovaOS\RemoveApps.ps1'
+    }
+
+    if ($Config.UltimatePerformance) {
+        # Duplique le mode "Performances optimales" avec un GUID fixe puis l'active ;
+        # repli sur "Performances elevees" si la duplication est refusee (Modern Standby).
+        $lines += 'powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 4e0a7a8c-6f1b-4d4e-9c6a-6e6f76616f73 >nul 2>&1'
+        $lines += 'powercfg -setactive 4e0a7a8c-6f1b-4d4e-9c6a-6e6f76616f73 >nul 2>&1 || powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1'
+    }
+
+    if ($lines.Count -eq 1) { return }
     $dir = Join-Path $ImageRoot 'Windows\Setup\Scripts'
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
-    # Execute par Windows a la fin de l'installation, avant la premiere connexion.
-    # Duplique le mode "Performances optimales" avec un GUID fixe puis l'active ;
-    # repli sur "Performances elevees" si la duplication est refusee (Modern Standby).
-    @'
-@echo off
-powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 4e0a7a8c-6f1b-4d4e-9c6a-6e6f76616f73 >nul 2>&1
-powercfg -setactive 4e0a7a8c-6f1b-4d4e-9c6a-6e6f76616f73 >nul 2>&1 || powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
-exit /b 0
-'@ | Set-Content (Join-Path $dir 'SetupComplete.cmd') -Encoding Ascii
+    ($lines + 'exit /b 0') | Set-Content (Join-Path $dir 'SetupComplete.cmd') -Encoding Ascii
 }
 
 function New-Autounattend([string] $Path, [string] $Arch, $Config) {
@@ -403,8 +426,13 @@ $oobe$themes    </component>
 
 function Remove-ProtectedPath([string] $Path) {
     if (-not (Test-Path $Path)) { return }
-    takeown /f $Path /r /d Y | Out-Null
-    icacls $Path /grant '*S-1-5-32-544:F' /t /c /q | Out-Null
+    # takeown /r /d attend la lettre "oui" de la langue de Windows (Y, O, J...) :
+    # on prend donc possession element par element, ce qui marche dans toutes les langues.
+    $items = @(Get-Item $Path -Force) + @(Get-ChildItem $Path -Recurse -Force -ErrorAction SilentlyContinue)
+    foreach ($item in $items) {
+        takeown /f $item.FullName /a | Out-Null
+        icacls $item.FullName /grant '*S-1-5-32-544:F' /c /q | Out-Null
+    }
     Remove-Item $Path -Recurse -Force
 }
 
@@ -477,14 +505,22 @@ try {
     $wimMounted = $true
     $arch = switch ((Get-WindowsImage -ImagePath $single -Index 1).Architecture) { 12 { 'arm64' } default { 'amd64' } }
 
+    $deferAppRemoval = $false
     if ($config.RemoveApps.Count -gt 0) {
         Write-Step 'Suppression des applications preinstallees'
-        $provisioned = Get-AppxProvisionedPackage -Path $mountDir
-        foreach ($pattern in $config.RemoveApps) {
-            $provisioned | Where-Object PackageName -like "*$pattern*" | ForEach-Object {
-                Write-Host "  - $($_.DisplayName)"
-                Remove-AppxProvisionedPackage -Path $mountDir -PackageName $_.PackageName | Out-Null
+        try {
+            $provisioned = Get-AppxProvisionedPackage -Path $mountDir
+            foreach ($pattern in $config.RemoveApps) {
+                $provisioned | Where-Object PackageName -like "*$pattern*" | ForEach-Object {
+                    Write-Host "  - $($_.DisplayName)"
+                    Remove-AppxProvisionedPackage -Path $mountDir -PackageName $_.PackageName | Out-Null
+                }
             }
+        }
+        catch {
+            Write-Warning "DISM ne peut pas lire les applis de cette image ($($_.Exception.Message))."
+            Write-Warning 'Elles seront supprimees automatiquement a la fin de l''installation de Windows.'
+            $deferAppRemoval = $true
         }
     }
 
@@ -509,7 +545,7 @@ try {
         Install-ThemeFiles $mountDir $config.Theme
         Install-FirstLogonScript $mountDir $config.Theme
     }
-    Install-FirstBootScript $mountDir $config
+    Install-FirstBootScript $mountDir $config $deferAppRemoval
 
     Write-Step 'Modifications du registre'
     Mount-OfflineHives $mountDir
