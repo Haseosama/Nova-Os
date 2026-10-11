@@ -449,8 +449,25 @@ exit /b 0
     $bootData = '-bootdata:2#p0,e,b' + $biosBootImage + '#pEF,e,b' + $uefiBootImage
     $volumeLabel = 'NOVAOS_W11_PRO'
     $volumeOption = '-l' + $volumeLabel
-    & $oscdimgExe '-m' '-o' '-u2' '-udfver102' $volumeOption $bootData $stagingMedia $OutputIso
-    if ($LASTEXITCODE -ne 0) { throw "oscdimg.exe a échoué (code $LASTEXITCODE). L'espace de travail est conservé dans $buildRoot" }
+    $oscdimgLog = Join-Path $buildRoot 'Oscdimg.log'
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        # Windows PowerShell 5.1 can turn native stderr output into a terminating
+        # NativeCommandError when ErrorActionPreference is Stop. Merge the streams
+        # and check oscdimg's actual exit code instead of treating stderr as failure.
+        $ErrorActionPreference = 'Continue'
+        & $oscdimgExe '-m' '-o' '-u2' '-udfver102' $volumeOption $bootData $stagingMedia $OutputIso 2>&1 |
+            Tee-Object -FilePath $oscdimgLog
+        $oscdimgExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    if ($oscdimgExitCode -ne 0) {
+        throw "oscdimg.exe a échoué (code $oscdimgExitCode). Consultez $oscdimgLog. L'espace de travail est conservé dans $buildRoot"
+    }
+    if (-not (Test-Path -LiteralPath $OutputIso -PathType Leaf)) {
+        throw "oscdimg.exe a retourné le code 0, mais l'ISO de sortie est introuvable : $OutputIso"
+    }
 
     Write-Host ''
     Write-Host 'Build terminé.' -ForegroundColor Green
