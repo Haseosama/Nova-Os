@@ -93,12 +93,44 @@ function Dismount-OfflineHives {
     }
 }
 
+# Mode differe : quand reg.exe ne peut pas charger les ruches de l'image sur ce PC
+# (constate avec une image Insider 26300), les modifications sont ecrites dans un script
+# execute par SetupComplete.cmd sur le PC installe, avant la premiere connexion.
+$script:RegDeferred = $false
+$script:DeferredReg = New-Object System.Collections.Generic.List[string]
+
+function ConvertTo-LiveKey([string] $Key) {
+    $Key -replace '^NOVA_SOFTWARE\\', 'HKLM\SOFTWARE\' -replace '^NOVA_SYSTEM\\', 'HKLM\SYSTEM\' -replace '^NOVA_DEFAULT\\', 'HKU\NOVA_DEFAULT\'
+}
+
+function Add-DeferredReg([string[]] $Arguments) {
+    $quoted = $Arguments | ForEach-Object { if ($_ -match '[\s&|<>^]' -or $_ -eq '') { "`"$_`"" } else { $_ } }
+    $script:DeferredReg.Add("reg $($quoted -join ' ') >nul 2>&1")
+}
+
 function Set-Reg([string] $Key, [string] $Name, [uint32] $Value) {
+    if ($script:RegDeferred) { Add-DeferredReg @('add', (ConvertTo-LiveKey $Key), '/v', $Name, '/t', 'REG_DWORD', '/d', ('0x{0:X}' -f $Value), '/f'); return }
     Invoke-Reg @('add', "HKLM\$Key", '/v', $Name, '/t', 'REG_DWORD', '/d', ('0x{0:X}' -f $Value), '/f')
 }
 
 function Set-RegString([string] $Key, [string] $Name, [string] $Value) {
+    if ($script:RegDeferred) { Add-DeferredReg @('add', (ConvertTo-LiveKey $Key), '/v', $Name, '/t', 'REG_SZ', '/d', $Value, '/f'); return }
     Invoke-Reg @('add', "HKLM\$Key", '/v', $Name, '/t', 'REG_SZ', '/d', $Value, '/f')
+}
+
+function Remove-RegValue([string] $Key, [string] $Name) {
+    if ($script:RegDeferred) { Add-DeferredReg @('delete', (ConvertTo-LiveKey $Key), '/v', $Name, '/f'); return }
+    cmd /c "reg delete `"HKLM\$Key`" /v `"$Name`" /f >nul 2>&1"
+}
+
+# Ecrit Windows\NovaOS\Registry.cmd (modifications differees) dans l'image.
+function Install-DeferredRegistry([string] $ImageRoot) {
+    $dir = Join-Path $ImageRoot $NovaDirInImage
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    $lines = @('@echo off', 'reg load HKU\NOVA_DEFAULT C:\Users\Default\NTUSER.DAT >nul 2>&1') +
+             $script:DeferredReg +
+             @('reg unload HKU\NOVA_DEFAULT >nul 2>&1', 'exit /b 0')
+    $lines | Set-Content (Join-Path $dir 'Registry.cmd') -Encoding Ascii
 }
 
 function Set-HardwareBypass {
@@ -109,7 +141,7 @@ function Set-HardwareBypass {
 }
 
 function Set-ImageTweaks($Config) {
-    $hasDefaultUser = Test-Path 'Registry::HKEY_LOCAL_MACHINE\NOVA_DEFAULT'
+    $hasDefaultUser = $script:RegDeferred -or (Test-Path 'Registry::HKEY_LOCAL_MACHINE\NOVA_DEFAULT')
 
     if ($Config.BypassHardwareChecks) {
         Write-Host '  - Contournement TPM / Secure Boot / RAM / CPU'
@@ -367,6 +399,11 @@ function Set-GamingTweaks([bool] $HasDefaultUser) {
 function Install-FirstBootScript([string] $ImageRoot, $Config, [bool] $DeferAppRemoval) {
     $lines = @('@echo off')
 
+    if ($script:RegDeferred) {
+        Install-DeferredRegistry $ImageRoot
+        $lines += 'call %WINDIR%\NovaOS\Registry.cmd'
+    }
+
     if ($DeferAppRemoval) {
         # DISM n'a pas pu lire les applis de l'image (build Insider plus recent que DISM) :
         # on les retire depuis le Windows installe, ou la liste est lisible.
@@ -403,9 +440,32 @@ Stop-Transcript | Out-Null
 
 function New-Autounattend([string] $Path, [string] $Arch, $Config) {
     $component = "processorArchitecture=`"$Arch`" publicKeyToken=`"31bf3856ad364e35`" language=`"neutral`" versionScope=`"nonSxS`""
+    $windowsPE = ''
     $specialize = ''
     $oobe = ''
     $themes = ''
+    if ($Config.BypassHardwareChecks) {
+        # Ecrit LabConfig dans le programme d'installation avant ses verifications materielles.
+        $order = 0
+        $commands = foreach ($name in 'BypassTPMCheck', 'BypassSecureBootCheck', 'BypassRAMCheck', 'BypassCPUCheck', 'BypassStorageCheck') {
+            $order++
+            @"
+        <RunSynchronousCommand wcm:action="add">
+          <Order>$order</Order>
+          <Path>reg add HKLM\SYSTEM\Setup\LabConfig /v $name /t REG_DWORD /d 1 /f</Path>
+        </RunSynchronousCommand>
+"@
+        }
+        $windowsPE = @"
+  <settings pass="windowsPE">
+    <component name="Microsoft-Windows-Setup" $component>
+      <RunSynchronous>
+$($commands -join "`n")
+      </RunSynchronous>
+    </component>
+  </settings>
+"@ + "`n"
+    }
     if ($Config.AllowLocalAccount) {
         $specialize = @"
   <settings pass="specialize">
@@ -436,7 +496,7 @@ function New-Autounattend([string] $Path, [string] $Arch, $Config) {
     @"
 <?xml version="1.0" encoding="utf-8"?>
 <unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
-$specialize  <settings pass="oobeSystem">
+$windowsPE$specialize  <settings pass="oobeSystem">
     <component name="Microsoft-Windows-Shell-Setup" $component>
 $oobe$themes    </component>
   </settings>
@@ -590,20 +650,28 @@ try {
         Install-ThemeFiles $mountDir $config.Theme
         Install-FirstLogonScript $mountDir $config.Theme
     }
-    Install-FirstBootScript $mountDir $config $deferAppRemoval
-
     Write-Step 'Modifications du registre'
-    Mount-OfflineHives $mountDir
+    try {
+        Mount-OfflineHives $mountDir
+    }
+    catch {
+        Dismount-OfflineHives
+        Write-Warning "Impossible de charger le registre de l'image ($($_.Exception.Message))."
+        Write-Warning 'Les modifications du registre seront appliquees a la fin de l''installation de Windows.'
+        $script:RegDeferred = $true
+    }
     try {
         Set-ImageTweaks $config
-        if ($config.RemoveOneDrive -and (Test-Path 'Registry::HKEY_LOCAL_MACHINE\NOVA_DEFAULT')) {
+        if ($config.RemoveOneDrive) {
             # C'est cette entree qui installe OneDrive a la premiere connexion.
-            cmd /c "reg delete HKLM\NOVA_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Run /v OneDriveSetup /f >nul 2>&1"
+            Remove-RegValue 'NOVA_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Run' 'OneDriveSetup'
         }
     }
     finally {
         Dismount-OfflineHives
     }
+
+    Install-FirstBootScript $mountDir $config $deferAppRemoval
 
     if ($config.CleanupComponentStore) {
         Write-Step 'Nettoyage du magasin de composants (long)'
@@ -625,8 +693,16 @@ try {
         $wimMounted = $true
         if ($config.BypassHardwareChecks) {
             Write-Host '  - Contournement TPM / Secure Boot / RAM / CPU'
-            Mount-OfflineHives $mountDir
-            try { Set-HardwareBypass } finally { Dismount-OfflineHives }
+            # En mode differe, autounattend.xml applique le contournement au demarrage de l'installation.
+            if (-not $script:RegDeferred) {
+                try {
+                    Mount-OfflineHives $mountDir
+                    try { Set-HardwareBypass } finally { Dismount-OfflineHives }
+                }
+                catch {
+                    Write-Warning "Registre de boot.wim inaccessible ($($_.Exception.Message)) : contournement via autounattend.xml."
+                }
+            }
         }
         if ($setupTheme) {
             Write-Host '  - Fond d''ecran futuriste'
@@ -641,7 +717,7 @@ try {
         Update-SetupBackgrounds $sources (Resolve-Asset $config.Theme.SetupBackground)
     }
 
-    if ($config.AllowLocalAccount -or $config.Theme.Enabled) {
+    if ($config.AllowLocalAccount -or $config.Theme.Enabled -or $config.BypassHardwareChecks) {
         Write-Step 'Ajout de autounattend.xml'
         New-Autounattend (Join-Path $isoDir 'autounattend.xml') $arch $config
     }
