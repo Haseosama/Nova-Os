@@ -478,7 +478,10 @@ $wimMounted = $false
 try {
     Write-Step 'Preparation du dossier de travail'
     if (Test-Path $WorkDir) { Remove-Item $WorkDir -Recurse -Force }
-    New-Item -ItemType Directory -Force -Path $isoDir, $mountDir, (Split-Path $OutputIso) | Out-Null
+    # Ne cree que les dossiers absents : New-Item sur la racine d'un disque (D:\) echoue sous PowerShell 5.1.
+    foreach ($dir in $isoDir, $mountDir, (Split-Path $OutputIso)) {
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+    }
 
     Write-Step "Montage de $IsoPath"
     $disk = Mount-DiskImage -ImagePath $IsoPath -PassThru
