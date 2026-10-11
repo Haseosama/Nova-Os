@@ -59,11 +59,8 @@
     # Libere les ~7 Go de "stockage reserve" pour les mises a jour.
     DisableReservedStorage = $true
 
-    # Supprime l'installateur OneDrive (OneDrive ne s'installe plus a la premiere connexion).
+    # OneDrive ne s'installe plus a la premiere connexion.
     RemoveOneDrive         = $true
-
-    # Supprime Microsoft Edge. Desactive par defaut : certaines applis (WebView2) en dependent.
-    RemoveEdge             = $false
 
     # --- Theme futuriste --------------------------------------------------
     # Mode sombre, couleur d'accent neon, transparence et fond d'ecran Nova-Os
@@ -77,15 +74,25 @@
         SetupBackground = 'assets\setup.jpg'
 
         # Style "liquid glass" : barre des taches plus transparente et effets de verre natifs.
+        # Aucune application tierce n'est installee.
         GlassEffects = $true
 
-        # Applis installees avec winget a la premiere connexion (Internet requis) pour pousser
-        # l'effet verre : TranslucentTB (barre des taches en verre) et Mica For Everyone
-        # (fond flou acrylique sur les fenetres). Vide la liste pour ne rien installer.
-        GlassApps = @(
-            'CharlesMilette.TranslucentTB'
-            'MicaForEveryone.MicaForEveryone'
-        )
+        # Lance l'ancien programme d'installation, le seul qui affiche le fond Nova-Os
+        # (le nouveau, depuis 24H2, garde son fond violet).
+        LegacySetup = $true
+    }
+
+    # --- Identite Nova-Os -------------------------------------------------
+    # Logo et nom Nova-Os dans Parametres > Systeme > Informations, nom du PC,
+    # logo Nova-Os comme image de compte par defaut.
+    Branding = @{
+        Enabled         = $true
+        Logo            = 'assets\logo.png'
+        Manufacturer    = 'Nova OS'
+        Model           = 'Nova OS Gaming Edition'
+        SupportURL      = 'https://github.com/Haseosama/Nova-Os'
+        ComputerName    = 'NOVA-PC'          # 15 caracteres maximum
+        AccountPictures = $true
     }
 
     # --- Optimisations jeux ----------------------------------------------
@@ -100,8 +107,4 @@
     # Desactive l'integrite de la memoire (VBS/HVCI) : quelques % de FPS en plus,
     # mais moins de protection contre les logiciels malveillants. Desactive par defaut.
     DisableVBS             = $false
-
-    # Nettoie le magasin de composants (image plus petite, mais les mises a jour deja integrees
-    # ne pourront plus etre desinstallees). Ajoute plusieurs minutes au build.
-    CleanupComponentStore  = $true
 }

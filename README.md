@@ -27,18 +27,29 @@ Tout est réglable dans [`config.psd1`](config.psd1) (mets `$false` pour désact
 | `DisableCopilot` | oui | Désactive Copilot. |
 | `DisableReservedStorage` | oui | Libère environ 7 Go réservés aux mises à jour. |
 | `RemoveOneDrive` | oui | OneDrive ne s'installe plus à la première connexion. |
-| `RemoveEdge` | non | Supprime Edge. Désactivé par défaut car certaines applis dépendent de WebView2. |
-| `Theme` | oui | Mode sombre, transparence, accent cyan néon (`AccentColor`), fond d'écran Nova-Os sur le bureau et l'écran de verrouillage. Mets ta propre image dans `Wallpaper` si tu veux. |
-| `Theme.SetupBackground` | `assets/setup.jpg` | Fond néon « NOVA OS » dans le programme d'installation de Windows (au démarrage sur la clé USB et via setup.exe). |
-| `Theme.GlassEffects` | oui | Style « liquid glass » : barre des tâches plus transparente, effets de verre natifs. |
-| `Theme.GlassApps` | TranslucentTB, Mica For Everyone | Installées automatiquement (winget) à la première connexion, si Internet est disponible : barre des tâches en verre et fond acrylique flou sur les fenêtres. Leurs réglages se changent dans leurs propres paramètres. Journal : `%LOCALAPPDATA%\NovaOS-FirstLogon.log`. |
+| `Theme` | oui | Mode sombre, transparence, accent cyan néon (`AccentColor`), fond d'écran Nova-Os sur le bureau et l'écran de verrouillage, « Windows à la une » désactivé. |
+| `Theme.SetupBackground` | `assets/setup.jpg` | Fond néon « NOVA OS » dans le programme d'installation et sur l'écran de chargement qui le précède. |
+| `Theme.LegacySetup` | oui | Lance l'ancien programme d'installation : le nouveau (depuis 24H2) ignore les fonds personnalisés. |
+| `Theme.GlassEffects` | oui | Style « liquid glass » natif : barre des tâches plus transparente. Aucune appli tierce. |
+| `Branding` | oui | Logo et nom Nova OS dans Paramètres > Système > Informations, nom du PC `NOVA-PC`, logo Nova comme image de compte par défaut. |
 | `GamingTweaks` | oui | Mode Jeu actif, enregistrement Game DVR coupé, planification GPU matérielle, priorité CPU/GPU aux jeux, souris sans accélération. |
-| `UltimatePerformance` | oui | Active le mode d'alimentation « Performances optimales » au premier démarrage (moins d'autonomie sur portable). |
+| `UltimatePerformance` | oui | Active le mode d'alimentation « Performances optimales » (moins d'autonomie sur portable). |
 | `DisableVBS` | non | Coupe l'intégrité de la mémoire : quelques FPS en plus, mais moins de protection. À activer en connaissance de cause. |
-| `CleanupComponentStore` | oui | Réduit la taille de l'image (les mises à jour intégrées ne seront plus désinstallables). |
 
-Deux écrans ne peuvent pas être personnalisés : le logo du fabricant au démarrage (il vient du BIOS/UEFI)
-et les écrans de configuration de la première mise en route (OOBE), dessinés par Windows.
+### Comment c'est appliqué
+
+L'image Windows (`install.wim`) n'est pas modifiée et aucune application tierce n'est installée.
+Le script ajoute à l'ISO un dossier `sources\$OEM$\$$\NovaOS`, que l'installation de Windows copie
+elle-même dans `C:\Windows\NovaOS`, et un `autounattend.xml` qui lance `Specialize.ps1` pendant
+l'installation, avant la création du compte. Ce script supprime les applis, écrit le registre (machine
+et profil par défaut) et installe les images de compte. Tout est noté dans `C:\Windows\NovaOS\Specialize.log`.
+
+### Ce qui reste aux couleurs de Windows
+
+Le logo Windows au démarrage (au-dessus des points qui tournent) est dans `bootres.dll`, un fichier signé
+vérifié par le Secure Boot : le modifier empêcherait le PC de démarrer. Les logos « Windows » dans les
+fenêtres de l'installeur et le bouton Démarrer sont aussi dans des fichiers signés par Microsoft ; le script
+n'y touche pas.
 
 ## Prérequis
 
@@ -56,8 +67,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\Build-NovaOS.ps1 -IsoPath "C:\Chemin\vers\Win11.iso"
 ```
 
-Le script affiche les éditions présentes (Famille, Pro…) et te demande laquelle garder.
-Pour éviter la question : `-ImageIndex 6` (par exemple pour Pro).
+L'édition installée est choisie par la clé générique `InstallKey` (Pro par défaut).
 
 À la fin, l'ISO se trouve dans `out\Nova-Os.iso`. Tu peux le copier sur une clé USB avec
 [Rufus](https://rufus.ie) ou le tester dans une machine virtuelle.
@@ -76,6 +86,4 @@ Options utiles :
 - `config.psd1` : la liste des modifications.
 - `assets/wallpaper.jpg` : le fond d'écran futuriste (3840×2160).
 - `assets/setup.jpg` : le fond du programme d'installation.
-
-Le script ajoute aussi dans l'ISO un `autounattend.xml` (compte local et thème par défaut) et,
-si `UltimatePerformance` est actif, un `SetupComplete.cmd` qui règle l'alimentation après l'installation.
+- `assets/logo.png` : le logo Nova OS.
