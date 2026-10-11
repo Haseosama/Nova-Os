@@ -1,8 +1,10 @@
 # Nova-Os
 
-Nova-Os est une version allégée de Windows 11, construite à partir de ton propre ISO officiel.
+Nova-Os est une version allégée de Windows 11, avec un thème futuriste et des réglages pour le jeu, construite à partir de ton propre ISO officiel.
 Le dépôt ne contient pas l'ISO lui-même, mais le script qui le fabrique : tu lances le script
 sur ton PC Windows, il applique les modifications et produit `out\Nova-Os.iso`.
+
+![Fond d'écran Nova-Os](assets/wallpaper.jpg)
 
 ## Pourquoi pas directement l'ISO sur GitHub ?
 
@@ -26,6 +28,10 @@ Tout est réglable dans [`config.psd1`](config.psd1) (mets `$false` pour désact
 | `DisableReservedStorage` | oui | Libère environ 7 Go réservés aux mises à jour. |
 | `RemoveOneDrive` | oui | OneDrive ne s'installe plus à la première connexion. |
 | `RemoveEdge` | non | Supprime Edge. Désactivé par défaut car certaines applis dépendent de WebView2. |
+| `Theme` | oui | Mode sombre, transparence, accent cyan néon (`AccentColor`), fond d'écran Nova-Os sur le bureau et l'écran de verrouillage. Mets ta propre image dans `Wallpaper` si tu veux. |
+| `GamingTweaks` | oui | Mode Jeu actif, enregistrement Game DVR coupé, planification GPU matérielle, priorité CPU/GPU aux jeux, souris sans accélération. |
+| `UltimatePerformance` | oui | Active le mode d'alimentation « Performances optimales » au premier démarrage (moins d'autonomie sur portable). |
+| `DisableVBS` | non | Coupe l'intégrité de la mémoire : quelques FPS en plus, mais moins de protection. À activer en connaissance de cause. |
 | `CleanupComponentStore` | oui | Réduit la taille de l'image (les mises à jour intégrées ne seront plus désinstallables). |
 
 ## Prérequis
@@ -61,4 +67,7 @@ Options utiles :
 
 - `Build-NovaOS.ps1` : le script de construction.
 - `config.psd1` : la liste des modifications.
-- `autounattend.xml` : réponses automatiques copiées dans l'ISO pour autoriser le compte local.
+- `assets/wallpaper.jpg` : le fond d'écran futuriste (3840×2160).
+
+Le script ajoute aussi dans l'ISO un `autounattend.xml` (compte local et thème par défaut) et,
+si `UltimatePerformance` est actif, un `SetupComplete.cmd` qui règle l'alimentation après l'installation.

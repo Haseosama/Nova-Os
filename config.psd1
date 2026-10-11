@@ -60,6 +60,28 @@
     # Supprime Microsoft Edge. Desactive par defaut : certaines applis (WebView2) en dependent.
     RemoveEdge             = $false
 
+    # --- Theme futuriste --------------------------------------------------
+    # Mode sombre, couleur d'accent neon, transparence et fond d'ecran Nova-Os
+    # (ecran de bureau et ecran de verrouillage).
+    Theme = @{
+        Enabled     = $true
+        AccentColor = '#00D4FF'                  # cyan neon ; essaie '#FF2BD6' pour du rose
+        Wallpaper   = 'assets\wallpaper.jpg'    # remplace par ton image (JPG) si tu veux
+    }
+
+    # --- Optimisations jeux ----------------------------------------------
+    # Mode Jeu actif, enregistrement Game DVR coupe, planification GPU materielle,
+    # priorite CPU/GPU aux jeux, acceleration de la souris desactivee.
+    GamingTweaks           = $true
+
+    # Active le mode d'alimentation "Performances optimales" au premier demarrage.
+    # Sur un PC portable, cela reduit l'autonomie.
+    UltimatePerformance    = $true
+
+    # Desactive l'integrite de la memoire (VBS/HVCI) : quelques % de FPS en plus,
+    # mais moins de protection contre les logiciels malveillants. Desactive par defaut.
+    DisableVBS             = $false
+
     # Nettoie le magasin de composants (image plus petite, mais les mises a jour deja integrees
     # ne pourront plus etre desinstallees). Ajoute plusieurs minutes au build.
     CleanupComponentStore  = $true
