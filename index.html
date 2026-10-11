@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090d13">
+  <meta name="description" content="NovaOS Studio — préparez localement un kit de personnalisation Windows.">
+  <title>NovaOS Studio — Image Builder</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><circle cx="12" cy="12" r="2.3"/><path d="m18.2 5.8-4.5 4.5"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9m4 0h3M4 17h3m4 0h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 19 6v5.2c0 4.3-2.8 7.5-7 9.3-4.2-1.8-7-5-7-9.3V6l7-2.5Z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-window" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9h17M8 6.8h.01M11 6.8h.01"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.75"/><path d="M12 7v5l3.2 2"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.4 2.4 0 1 1 4.1 1.7c-1.1 1-1.8 1.4-1.8 2.8M12 17h.01"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4m-4 4 4-4 4 4"/><path d="M5 14v5a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-5"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M13.5 3.5H7A2 2 0 0 0 5 5.5v13A2 2 0 0 0 7 20.5h10a2 2 0 0 0 2-2V9Z"/><path d="M13.5 3.5V9H19M8.5 13h7m-7 3.5h7"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.2 4.2L19 7"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3M12 14v2.5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m-4-4 4 4 4-4"/><path d="M5 16v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/><path d="M9.5 2.5v4m5-4v4m-5 11v4m5-4v4M2.5 9.5h4m-4 5h4m11-5h4m-4 5h4"/><path d="M10 10h4v4h-4z"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v2m0 15v2m9.5-9.5h-2m-15 0h-2m16.2-6.7-1.4 1.4M6.7 17.3l-1.4 1.4m13.4 0-1.4-1.4M6.7 6.7 5.3 5.3"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#overview" aria-label="NovaOS Studio, accueil">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 42 42" fill="none"><path d="M21 2.7 37 11.9v18.3L21 39.3 5 30.2V11.9L21 2.7Z" stroke="currentColor" stroke-width="1.25"/><path d="m14.1 27.8 6.8-13.6 6.9 13.6M16.8 22.6h8.5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21" cy="21" r="17.1" stroke="currentColor" stroke-opacity=".18"/></svg>
+        </span>
+        <span class="brand-wordmark">nova<span>os</span><small>IMAGE WORKSHOP</small></span>
+      </a>
+
+      <button class="workspace-switch" type="button" id="newProjectButton">
+        <span class="workspace-glyph"><svg class="icon"><use href="#i-cpu"/></svg></span>
+        <span class="workspace-copy"><strong>Atelier local</strong><small>Projet sans titre</small></span>
+        <span class="workspace-menu" aria-hidden="true">···</span>
+      </button>
+
+      <div class="nav-label">ESPACE DE TRAVAIL</div>
+      <nav class="side-nav" aria-label="Navigation principale">
+        <button class="nav-item is-active" type="button" data-target="overview">
+          <svg class="icon"><use href="#i-grid"/></svg><span>Vue d’ensemble</span>
+        </button>
+        <button class="nav-item" type="button" data-target="source">
+          <svg class="icon"><use href="#i-disc"/></svg><span>Image source</span><span class="nav-count" id="navIsoState">—</span>
+        </button>
+        <button class="nav-item" type="button" data-target="customize" data-tab="system">
+          <svg class="icon"><use href="#i-sliders"/></svg><span>Optimisations</span>
+        </button>
+        <button class="nav-item" type="button" data-target="customize" data-tab="privacy">
+          <svg class="icon"><use href="#i-shield"/></svg><span>Confidentialité</span><span class="nav-accent"></span>
+        </button>
+        <button class="nav-item" type="button" data-target="installer">
+          <svg class="icon"><use href="#i-window"/></svg><span>Installateur</span>
+        </button>
+      </nav>
+
+      <div class="nav-label nav-label-secondary">PROJET</div>
+      <nav class="side-nav">
+        <button class="nav-item" type="button" data-target="builds">
+          <svg class="icon"><use href="#i-clock"/></svg><span>Historique</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-note">
+        <div class="sidebar-note-icon"><svg class="icon"><use href="#i-lock"/></svg></div>
+        <div><strong>Tout reste local</strong><span>Aucun téléversement de l’ISO</span></div>
+        <span class="online-dot" aria-label="Actif"></span>
+      </div>
+      <div class="sidebar-bottom">
+        <span class="status-pip"></span><span>Moteur de configuration</span><span class="version-label">v1.0</span>
+      </div>
+    </aside>
+
+    <div class="main-frame">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-button mobile-menu" type="button" id="menuButton" aria-label="Ouvrir le menu"><svg class="icon"><use href="#i-menu"/></svg></button>
+          <div class="breadcrumb"><span>NovaOS Studio</span><span class="breadcrumb-sep">/</span><strong>Nouvelle image</strong></div>
+        </div>
+        <div class="topbar-right">
+          <div class="local-pill"><span class="local-pill-dot"></span>Traitement local</div>
+          <button class="icon-button help-button" type="button" id="helpButton" aria-label="Aide"><svg class="icon"><use href="#i-help"/></svg></button>
+          <div class="user-avatar" title="Profil local">N</div>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <section class="hero" id="overview" aria-labelledby="heroTitle">
+          <div class="hero-grain"></div>
+          <div class="hero-content">
+            <div class="eyebrow"><span class="eyebrow-mark"></span> NOVA // IMAGE BUILDER <span class="eyebrow-line"></span><span class="eyebrow-version">BUILD 01.24</span></div>
+            <h1 id="heroTitle">Un Windows.<br><span>À votre image.</span></h1>
+            <p class="hero-description">Un poste plus léger, plus discret, plus personnel. Préparez votre configuration et exportez un kit de déploiement en quelques étapes.</p>
+            <div class="hero-actions">
+              <button class="button button-primary" type="button" data-scroll-to="source">Configurer mon image <svg class="icon"><use href="#i-arrow"/></svg></button>
+              <button class="button button-quiet" type="button" data-scroll-to="customize">Explorer les réglages</button>
+            </div>
+            <div class="hero-footnote"><span><svg class="icon"><use href="#i-shield"/></svg> Vos choix, votre contrôle</span><span class="hero-foot-separator"></span><span>Windows 10 &amp; 11 · x64</span></div>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="hero-gridlines"></div>
+            <div class="orbit orbit-outer"></div><div class="orbit orbit-inner"></div><div class="orbit orbit-core"></div>
+            <div class="orbit-tick tick-a"></div><div class="orbit-tick tick-b"></div><div class="orbit-tick tick-c"></div>
+            <div class="hero-core"><div class="core-logo"><svg viewBox="0 0 44 44" fill="none"><path d="m9 32 13-23 13 23M14 23h22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span>NOVA<span>OS</span></span><small>YOUR SYSTEM · REFINED</small></div>
+            <div class="visual-chip visual-chip-top"><span class="chip-ring"></span><span>IMAGE ENGINE</span><strong>READY</strong></div>
+            <div class="visual-chip visual-chip-bottom"><span class="tiny-wave"><i></i><i></i><i></i><i></i><i></i></span><span>LOCAL MODE</span><strong>100%</strong></div>
+            <div class="visual-coordinates">48°51′ N&nbsp; 02°21′ E<br>SECURE BUILD ENVIRONMENT</div>
+          </div>
+          <div class="hero-index">01 <span>/</span> 04</div>
+        </section>
+
+        <div class="overview-row">
+          <div>
+            <div class="section-eyebrow">VOTRE ESPACE DE TRAVAIL</div>
+            <h2>Console de personnalisation</h2>
+          </div>
+          <button class="text-button" type="button" id="resetButton"><svg class="icon"><use href="#i-plus"/></svg> Nouvelle configuration</button>
+        </div>
+
+        <section class="metrics-grid" aria-label="État du projet">
+          <article class="metric-card">
+            <div class="metric-icon metric-icon-green"><svg class="icon"><use href="#i-disc"/></svg></div>
+            <div class="metric-copy"><span>IMAGE SOURCE</span><strong id="metricIso">En attente</strong><small id="metricIsoSub">Aucun média chargé</small></div>
+            <div class="metric-corner">01</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-icon metric-icon-blue"><svg class="icon"><use href="#i-sliders"/></svg></div>
+            <div class="metric-copy"><span>OPTIONS ACTIVÉES</span><strong id="metricOptions">12</strong><small>Sur votre profil actuel</small></div>
+            <div class="metric-corner">02</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-icon metric-icon-lilac"><svg class="icon"><use href="#i-shield"/></svg></div>
+            <div class="metric-copy"><span>CONFIDENTIALITÉ</span><strong>Renforcée</strong><small>Diagnostics limités au minimum permis</small></div>
+            <div class="metric-corner">03</div>
+          </article>
+          <article class="metric-card metric-card-ready">
+            <div class="metric-icon metric-icon-amber"><svg class="icon"><use href="#i-window"/></svg></div>
+            <div class="metric-copy"><span>ÉTAT DU PROJET</span><strong id="metricBuildState">À configurer</strong><small>Export local du kit disponible</small></div>
+            <span class="metric-live-dot"></span>
+          </article>
+        </section>
+
+        <div class="builder-layout">
+          <div class="builder-main">
+            <section class="panel-section" id="source" aria-labelledby="sourceTitle">
+              <div class="panel-heading">
+                <div class="step-badge">01</div>
+                <div class="panel-title-wrap"><div class="section-eyebrow">POINT DE DÉPART</div><h2 id="sourceTitle">Votre image source</h2><p>Sélectionnez l’ISO Windows à utiliser comme référence.</p></div>
+                <span class="panel-status"><span class="status-hollow"></span> À IMPORTER</span>
+              </div>
+              <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Sélectionner ou déposer une image ISO">
+                <input id="isoInput" type="file" accept=".iso,application/x-iso9660-image" hidden>
+                <div class="dropzone-content" id="dropzonePrompt">
+                  <div class="upload-symbol"><svg class="icon"><use href="#i-upload"/></svg><span class="upload-spark">+</span></div>
+                  <div class="dropzone-text"><strong>Déposez votre fichier ISO ici</strong><span>ou <button class="inline-link" id="browseButton" type="button">parcourez vos fichiers</button></span></div>
+                  <div class="dropzone-rule"></div>
+                  <div class="dropzone-meta"><span><span class="format-dot"></span> ISO · Windows 10 / 11</span><span>Le fichier reste sur cet appareil</span></div>
+                </div>
+                <div class="file-loaded" id="fileLoaded" hidden>
+                  <div class="loaded-file-icon"><svg class="icon"><use href="#i-file"/></svg></div>
+                  <div class="loaded-file-copy"><strong id="loadedFileName">Windows.iso</strong><span id="loadedFileMeta">ISO · en attente de lecture</span></div>
+                  <span class="loaded-check"><svg class="icon"><use href="#i-check"/></svg></span>
+                  <button type="button" class="remove-file" id="removeFileButton" aria-label="Retirer le fichier"><svg class="icon"><use href="#i-x"/></svg></button>
+                </div>
+              </div>
+              <p class="under-note"><svg class="icon"><use href="#i-lock"/></svg> Le contenu de l’ISO n’est pas envoyé ni analysé dans le navigateur. Seul son nom et sa taille servent à préparer le kit.</p>
+            </section>
+
+            <section class="panel-section" id="profile" aria-labelledby="profileTitle">
+              <div class="panel-heading">
+                <div class="step-badge">02</div>
+                <div class="panel-title-wrap"><div class="section-eyebrow">BASE DE CONFIGURATION</div><h2 id="profileTitle">Choisissez votre profil</h2><p>Commencez par un préréglage, puis ajustez chaque détail.</p></div>
+              </div>
+              <div class="profile-grid" role="group" aria-label="Profils de configuration">
+                <button class="profile-card is-selected" type="button" data-profile="nova" aria-pressed="true">
+                  <span class="profile-top"><span class="profile-icon profile-icon-nova"><svg class="icon"><use href="#i-spark"/></svg></span><span class="recommended-tag">RECOMMANDÉ</span></span>
+                  <strong>Nova Clean</strong><span class="profile-description">L’équilibre idéal entre confort, confidentialité et sobriété.</span>
+                  <span class="profile-foot"><span>Équilibré</span><span class="profile-radio"></span></span>
+                </button>
+                <button class="profile-card" type="button" data-profile="essential" aria-pressed="false">
+                  <span class="profile-top"><span class="profile-icon profile-icon-ess"><svg class="icon"><use href="#i-cpu"/></svg></span><span class="profile-scope">LÉGER</span></span>
+                  <strong>Essentiel</strong><span class="profile-description">Les ajustements indispensables, sans retirer vos applications.</span>
+                  <span class="profile-foot"><span>Prudent</span><span class="profile-radio"></span></span>
+                </button>
+                <button class="profile-card" type="button" data-profile="custom" aria-pressed="false">
+                  <span class="profile-top"><span class="profile-icon profile-icon-custom"><svg class="icon"><use href="#i-sliders"/></svg></span><span class="profile-scope">MANUEL</span></span>
+                  <strong>Sur mesure</strong><span class="profile-description">Partez de vos réglages actuels et gardez la main sur tout.</span>
+                  <span class="profile-foot"><span>Personnalisé</span><span class="profile-radio"></span></span>
+                </button>
+              </div>
+            </section>
+
+            <section class="panel-section" id="customize" aria-labelledby="customizeTitle">
+              <div class="panel-heading panel-heading-tight">
+                <div class="step-badge">03</div>
+                <div class="panel-title-wrap"><div class="section-eyebrow">RÉGLAGES AVANCÉS</div><h2 id="customizeTitle">Affinez votre système</h2><p>Chaque option peut être modifiée individuellement.</p></div>
+              </div>
+              <div class="settings-card">
+                <div class="settings-tabs" role="tablist" aria-label="Catégories de réglages">
+                  <button class="settings-tab is-active" type="button" role="tab" aria-selected="true" data-tab="system"><svg class="icon"><use href="#i-cpu"/></svg> Système <span id="tabCountSystem">—</span></button>
+                  <button class="settings-tab" type="button" role="tab" aria-selected="false" data-tab="privacy"><svg class="icon"><use href="#i-shield"/></svg> Confidentialité <span id="tabCountPrivacy">—</span></button>
+                  <button class="settings-tab" type="button" role="tab" aria-selected="false" data-tab="apps"><svg class="icon"><use href="#i-window"/></svg> Applications <span id="tabCountApps">—</span></button>
+                </div>
+                <div class="settings-intro" id="settingsIntro"></div>
+                <div class="settings-list" id="settingsList"></div>
+                <div class="settings-footnote" id="settingsFootnote"><svg class="icon"><use href="#i-lock"/></svg><span>Les réglages proposés sont documentés dans le kit avant toute application.</span></div>
+              </div>
+            </section>
+
+            <section class="panel-section" id="installer" aria-labelledby="installerTitle">
+              <div class="panel-heading">
+                <div class="step-badge">04</div>
+                <div class="panel-title-wrap"><div class="section-eyebrow">EXPÉRIENCE DE DÉPLOIEMENT</div><h2 id="installerTitle">Préparez l’installation</h2><p>Réglez la langue et l’apparence appliquées au premier démarrage.</p></div>
+                <span class="panel-status panel-status-configured"><span class="status-hollow"></span> PERSONNALISABLE</span>
+              </div>
+              <div class="installer-card">
+                <div class="installer-fields">
+                  <label class="field-label" for="languageSelect">Langue de configuration</label>
+                  <div class="select-wrap"><select id="languageSelect"><option value="fr-FR">Français (France)</option><option value="en-US">English (United States)</option><option value="es-ES">Español (España)</option><option value="de-DE">Deutsch (Deutschland)</option></select><svg class="icon"><use href="#i-chevron"/></svg></div>
+                  <div class="field-label field-label-spaced">Thème du bureau</div>
+                  <div class="theme-choice" role="group" aria-label="Thème du bureau">
+                    <button class="theme-option is-selected" type="button" data-theme="dark" aria-pressed="true"><span class="theme-preview theme-preview-dark"><i></i><i></i><i></i></span><span>Sombre</span><svg class="icon"><use href="#i-check"/></svg></button>
+                    <button class="theme-option" type="button" data-theme="light" aria-pressed="false"><span class="theme-preview theme-preview-light"><i></i><i></i><i></i></span><span>Clair</span><svg class="icon"><use href="#i-check"/></svg></button>
+                  </div>
+                  <div class="field-label field-label-spaced">Couleur d’accentuation</div>
+                  <div class="accent-picker" role="group" aria-label="Couleur d’accentuation">
+                    <button class="accent-swatch is-selected" type="button" data-accent="mint" aria-label="Vert néon" aria-pressed="true"><span></span></button>
+                    <button class="accent-swatch" type="button" data-accent="ice" aria-label="Bleu glacier" aria-pressed="false"><span></span></button>
+                    <button class="accent-swatch" type="button" data-accent="violet" aria-label="Violet orbital" aria-pressed="false"><span></span></button>
+                    <button class="accent-swatch" type="button" data-accent="amber" aria-label="Ambre" aria-pressed="false"><span></span></button>
+                    <span class="accent-current" id="accentLabel">Vert néon</span>
+                  </div>
+                </div>
+                <div class="installer-preview-wrap">
+                  <div class="preview-caption"><span>APERÇU DE L’EXPÉRIENCE</span><span class="preview-live"><i></i> EN DIRECT</span></div>
+                  <div class="installer-preview" id="installerPreview">
+                    <div class="preview-topline"><span class="preview-brand"><i></i> NOVA<span>OS</span></span><span class="preview-dots"><i></i><i></i><i></i></span></div>
+                    <div class="preview-center"><div class="preview-orbit"><svg viewBox="0 0 44 44" fill="none"><path d="m9 32 13-23 13 23M14 23h22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="preview-step">01 — CONFIGURATION TERMINÉE</span><strong>Votre espace.<br>Vos règles.</strong><span class="preview-subtitle">Bienvenue dans NovaOS.</span><span class="preview-progress"><i></i></span></div>
+                    <div class="preview-footer"><span>PRÊT POUR LE PREMIER DÉMARRAGE</span><span>24H2 <i>·</i> X64</span></div>
+                  </div>
+                  <p class="preview-disclaimer">Le thème s’applique au bureau Windows après l’installation. L’écran natif de Windows Setup ne peut pas être redessiné par ce kit.</p>
+                </div>
+              </div>
+              <div class="installer-note"><span class="note-icon"><svg class="icon"><use href="#i-sun"/></svg></span><span><strong>Une installation qui reste à vous.</strong> Le kit préconfigure la langue et les préférences visuelles. Il ne contourne pas l’activation, le compte Microsoft ni les exigences matérielles de Windows.</span></div>
+            </section>
+
+            <section class="panel-section history-section" id="builds" aria-labelledby="historyTitle">
+              <div class="panel-heading panel-heading-history">
+                <div class="step-badge"><svg class="icon"><use href="#i-clock"/></svg></div>
+                <div class="panel-title-wrap"><div class="section-eyebrow">VOS EXPORTS LOCAUX</div><h2 id="historyTitle">Historique du projet</h2><p>Les exports restent sur cet appareil et ne sont pas téléversés.</p></div>
+                <button class="text-button text-button-small" id="clearHistoryButton" type="button">Effacer</button>
+              </div>
+              <div class="history-list" id="historyList"><div class="history-empty"><span class="history-empty-icon"><svg class="icon"><use href="#i-clock"/></svg></span><div><strong>Pas encore d’export</strong><span>Votre premier kit apparaîtra ici.</span></div></div></div>
+            </section>
+
+            <footer class="page-footer"><span>NovaOS Studio <span class="footer-version">· 1.0.0</span></span><span><svg class="icon"><use href="#i-lock"/></svg> Configuration préparée localement</span><span>Conçu pour garder le contrôle.</span></footer>
+          </div>
+
+          <aside class="build-sidebar" aria-label="Résumé et export">
+            <div class="build-summary-card">
+              <div class="summary-topline"><span class="summary-label">RÉSUMÉ DU BUILD</span><span class="summary-pulse"></span></div>
+              <h3>Votre kit<br><span>NovaOS.</span></h3>
+              <p class="summary-description">Un package de configuration clair, prêt à être utilisé sur votre environnement Windows.</p>
+              <div class="summary-status" id="summaryStatus"><span class="summary-status-icon"><svg class="icon"><use href="#i-disc"/></svg></span><span><strong>Source manquante</strong><small>Ajoutez un ISO pour continuer</small></span><span class="summary-state-dot"></span></div>
+              <div class="summary-divider"></div>
+              <div class="summary-breakdown">
+                <div class="breakdown-row"><span>Options sélectionnées</span><strong id="summaryOptionCount">12</strong></div>
+                <div class="breakdown-row"><span>Applications à retirer</span><strong id="summaryAppsCount">4</strong></div>
+                <div class="breakdown-row"><span>Langue d’installation</span><strong id="summaryLanguage">FR · FR</strong></div>
+                <div class="breakdown-row"><span>Thème de bureau</span><strong id="summaryTheme">Sombre</strong></div>
+              </div>
+              <div class="summary-completeness"><div class="completeness-label"><span>CONFIGURATION</span><strong id="completenessValue">72%</strong></div><div class="completeness-track"><span id="completenessBar"></span></div></div>
+              <button class="button button-build" type="button" id="exportButton"><svg class="icon"><use href="#i-download"/></svg><span>Exporter le kit</span><svg class="icon button-build-arrow"><use href="#i-arrow"/></svg></button>
+              <div class="export-format"><span><i></i> PACKAGE .ZIP</span><span>Fichiers + instructions</span></div>
+              <div class="telemetry-notice"><svg class="icon"><use href="#i-shield"/></svg><span><strong>À propos des diagnostics</strong><br>Windows conserve certaines données requises. Le kit applique le niveau minimal pris en charge par l’édition sélectionnée, sans promettre « zéro télémétrie ».</span></div>
+            </div>
+            <div class="included-card">
+              <div class="included-title"><span>INCLUS DANS LE KIT</span><svg class="icon"><use href="#i-spark"/></svg></div>
+              <div class="included-item"><span class="included-file-icon"><svg class="icon"><use href="#i-file"/></svg></span><span><strong>Profil NovaOS</strong><small>Vos préférences au format JSON</small></span><span class="included-check"><svg class="icon"><use href="#i-check"/></svg></span></div>
+              <div class="included-item"><span class="included-file-icon"><svg class="icon"><use href="#i-window"/></svg></span><span><strong>Script PowerShell</strong><small>Actions documentées, à valider</small></span><span class="included-check"><svg class="icon"><use href="#i-check"/></svg></span></div>
+              <div class="included-item"><span class="included-file-icon"><svg class="icon"><use href="#i-disc"/></svg></span><span><strong>Fichier de réponse</strong><small>Langue et clavier uniquement</small></span><span class="included-check"><svg class="icon"><use href="#i-check"/></svg></span></div>
+              <div class="included-separator"></div>
+              <button class="learn-more-button" id="kitDetailsButton" type="button">Comprendre ce qui sera exporté <svg class="icon"><use href="#i-arrow"/></svg></button>
+            </div>
+            <div class="security-caption"><span class="security-check"><svg class="icon"><use href="#i-check"/></svg></span><span>Pas d’upload.<br><strong>Pas de surprise.</strong></span><span class="security-caption-code">NOVA<br>LOCAL</span></div>
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <section class="info-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="icon-button modal-close" id="modalClose" type="button" aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+      <div class="modal-icon"><svg class="icon"><use href="#i-spark"/></svg></div>
+      <div class="section-eyebrow">À SAVOIR AVANT L’EXPORT</div>
+      <h2 id="modalTitle">Un kit, pas un ISO reconstruit.</h2>
+      <p>NovaOS Studio prépare un ZIP avec votre profil JSON, un script PowerShell relisible et un fichier de réponse limité à la langue et au clavier. Le navigateur ne monte pas et ne modifie pas le contenu du fichier ISO.</p>
+      <div class="modal-callout"><svg class="icon"><use href="#i-shield"/></svg><span><strong>Gardez la main.</strong> Vérifiez chaque fichier avant de l’exécuter. Les paramètres Windows varient selon la version, l’édition et les stratégies de votre organisation.</span></div>
+      <p class="modal-last">Pour reconstruire réellement un ISO, il faut ensuite intégrer ce kit à un flux Windows avec DISM et les outils Windows ADK. Certaines données de diagnostic sont obligatoires selon l’édition ; aucune configuration ne peut garantir leur suppression totale.</p>
+      <button class="button button-primary modal-action" id="modalDone" type="button">J’ai compris <svg class="icon"><use href="#i-check"/></svg></button>
+    </section>
+  </div>
+</body>
+</html>
