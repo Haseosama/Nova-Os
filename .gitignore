@@ -1,0 +1,6 @@
+# Les ISO et le dossier de travail ne vont jamais dans le depot (limite GitHub : 100 Mo par fichier).
+*.iso
+*.wim
+*.esd
+work/
+out/
