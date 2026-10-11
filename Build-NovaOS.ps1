@@ -49,32 +49,48 @@ function Write-Step([string] $Message) {
 # Registre hors ligne
 # ---------------------------------------------------------------------------
 
+# Lance reg.exe et leve une erreur lisible (avec le message de reg) s'il echoue.
+function Invoke-Reg([string[]] $Arguments) {
+    # Sous Windows PowerShell 5.1, rediriger la sortie d'erreur d'un .exe avec 'Stop' leve une exception.
+    $ErrorActionPreference = 'Continue'
+    $output = & reg.exe @Arguments 2>&1 | ForEach-Object { "$_" }
+    if ($LASTEXITCODE -ne 0) {
+        throw "reg $($Arguments -join ' ') a echoue (code $LASTEXITCODE) : $($output -join ' ')"
+    }
+}
+
+$OfflineHives = [ordered]@{
+    NOVA_SOFTWARE = 'Windows\System32\config\SOFTWARE'
+    NOVA_SYSTEM   = 'Windows\System32\config\SYSTEM'
+    NOVA_DEFAULT  = 'Users\Default\NTUSER.DAT'
+}
+
 function Mount-OfflineHives([string] $ImageRoot) {
-    reg load HKLM\NOVA_SOFTWARE "$ImageRoot\Windows\System32\config\SOFTWARE" | Out-Null
-    reg load HKLM\NOVA_SYSTEM   "$ImageRoot\Windows\System32\config\SYSTEM"   | Out-Null
-    if (Test-Path "$ImageRoot\Users\Default\NTUSER.DAT") {
-        reg load HKLM\NOVA_DEFAULT "$ImageRoot\Users\Default\NTUSER.DAT" | Out-Null
+    # Une ruche restee chargee par une construction interrompue bloquerait le chargement.
+    Dismount-OfflineHives
+    foreach ($hive in $OfflineHives.Keys) {
+        $file = Join-Path $ImageRoot $OfflineHives[$hive]
+        if ($hive -eq 'NOVA_DEFAULT' -and -not (Test-Path $file)) { continue }
+        Invoke-Reg @('load', "HKLM\$hive", $file)
     }
 }
 
 function Dismount-OfflineHives {
     [gc]::Collect()
     [gc]::WaitForPendingFinalizers()
-    foreach ($hive in 'NOVA_SOFTWARE', 'NOVA_SYSTEM', 'NOVA_DEFAULT') {
+    foreach ($hive in $OfflineHives.Keys) {
         if (Test-Path "Registry::HKEY_LOCAL_MACHINE\$hive") {
-            reg unload "HKLM\$hive" | Out-Null
+            Invoke-Reg @('unload', "HKLM\$hive")
         }
     }
 }
 
 function Set-Reg([string] $Key, [string] $Name, [uint32] $Value) {
-    reg add "HKLM\$Key" /v $Name /t REG_DWORD /d ('0x{0:X}' -f $Value) /f | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Echec de l'ecriture de HKLM\$Key\$Name" }
+    Invoke-Reg @('add', "HKLM\$Key", '/v', $Name, '/t', 'REG_DWORD', '/d', ('0x{0:X}' -f $Value), '/f')
 }
 
 function Set-RegString([string] $Key, [string] $Name, [string] $Value) {
-    reg add "HKLM\$Key" /v $Name /t REG_SZ /d $Value /f | Out-Null
-    if ($LASTEXITCODE -ne 0) { throw "Echec de l'ecriture de HKLM\$Key\$Name" }
+    Invoke-Reg @('add', "HKLM\$Key", '/v', $Name, '/t', 'REG_SZ', '/d', $Value, '/f')
 }
 
 function Set-HardwareBypass {
