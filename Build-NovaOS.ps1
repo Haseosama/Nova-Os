@@ -424,16 +424,26 @@ $oobe$themes    </component>
 # Fichiers
 # ---------------------------------------------------------------------------
 
+# Supprime un fichier ou dossier protege de l'image. Ne bloque jamais la construction :
+# en cas d'echec, un avertissement est affiche et on continue.
 function Remove-ProtectedPath([string] $Path) {
     if (-not (Test-Path $Path)) { return }
-    # takeown /r /d attend la lettre "oui" de la langue de Windows (Y, O, J...) :
-    # on prend donc possession element par element, ce qui marche dans toutes les langues.
-    $items = @(Get-Item $Path -Force) + @(Get-ChildItem $Path -Recurse -Force -ErrorAction SilentlyContinue)
-    foreach ($item in $items) {
-        takeown /f $item.FullName /a | Out-Null
-        icacls $item.FullName /grant '*S-1-5-32-544:F' /c /q | Out-Null
+    # Sous Windows PowerShell 5.1, rediriger la sortie d'erreur d'un .exe avec 'Stop' leve une exception.
+    $ErrorActionPreference = 'Continue'
+    try {
+        # takeown /r /d attend la lettre "oui" de la langue de Windows (Y, O, J...) :
+        # on prend donc possession element par element, ce qui marche dans toutes les langues.
+        # Pas de icacls /t sur un fichier : il parcourrait tous les sous-dossiers du dossier parent.
+        $items = @(Get-Item $Path -Force) + @(Get-ChildItem $Path -Recurse -Force -ErrorAction SilentlyContinue)
+        foreach ($item in $items) {
+            takeown /f $item.FullName /a 2>&1 | Out-Null
+            icacls $item.FullName /grant '*S-1-5-32-544:F' /c /q 2>&1 | Out-Null
+        }
+        Remove-Item $Path -Recurse -Force -ErrorAction Stop
     }
-    Remove-Item $Path -Recurse -Force
+    catch {
+        Write-Warning "Impossible de supprimer $Path ($($_.Exception.Message)), on continue."
+    }
 }
 
 function Find-Oscdimg([string] $Explicit) {
@@ -552,7 +562,8 @@ try {
     try {
         Set-ImageTweaks $config
         if ($config.RemoveOneDrive -and (Test-Path 'Registry::HKEY_LOCAL_MACHINE\NOVA_DEFAULT')) {
-            reg delete 'HKLM\NOVA_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Run' /v OneDriveSetup /f 2>$null | Out-Null
+            # C'est cette entree qui installe OneDrive a la premiere connexion.
+            cmd /c "reg delete HKLM\NOVA_DEFAULT\Software\Microsoft\Windows\CurrentVersion\Run /v OneDriveSetup /f >nul 2>&1"
         }
     }
     finally {
