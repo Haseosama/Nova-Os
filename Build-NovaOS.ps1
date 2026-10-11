@@ -173,12 +173,46 @@ function ConvertFrom-HexColor([string] $Hex) {
     }
 }
 
+function Resolve-Asset([string] $Path) {
+    if ([IO.Path]::IsPathRooted($Path)) { return $Path }
+    Join-Path $PSScriptRoot $Path
+}
+
+# Remplace les fonds du programme d'installation (background_*.bmp / .png) par l'image Nova-Os,
+# a la meme taille et dans le meme format que les originaux.
+function Update-SetupBackgrounds([string] $Dir, [string] $Image) {
+    Add-Type -AssemblyName System.Drawing
+    $files = Get-ChildItem $Dir -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like 'background*' -and $_.Extension -in '.bmp', '.png' }
+    foreach ($file in $files) {
+        $orig = [System.Drawing.Image]::FromFile($file.FullName)
+        $w = $orig.Width; $h = $orig.Height
+        $orig.Dispose()
+
+        $src = [System.Drawing.Image]::FromFile($Image)
+        $bmp = New-Object System.Drawing.Bitmap $w, $h
+        $g = [System.Drawing.Graphics]::FromImage($bmp)
+        $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+        # Remplissage sans deformation : on agrandit puis on recadre au centre.
+        $scale = [Math]::Max($w / $src.Width, $h / $src.Height)
+        $dw = $src.Width * $scale; $dh = $src.Height * $scale
+        $g.DrawImage($src, ($w - $dw) / 2, ($h - $dh) / 2, $dw, $dh)
+        $g.Dispose(); $src.Dispose()
+
+        takeown /f $file.FullName | Out-Null
+        icacls $file.FullName /grant '*S-1-5-32-544:F' /q | Out-Null
+        $file.IsReadOnly = $false
+        $format = if ($file.Extension -eq '.png') { [System.Drawing.Imaging.ImageFormat]::Png } else { [System.Drawing.Imaging.ImageFormat]::Bmp }
+        $bmp.Save($file.FullName, $format)
+        $bmp.Dispose()
+        Write-Host "  - $($file.Name) ($w x $h)"
+    }
+}
+
 function Install-ThemeFiles([string] $ImageRoot, $Theme) {
     $dir = Join-Path $ImageRoot $NovaDirInImage
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
-    $wallpaper = $Theme.Wallpaper
-    if (-not [IO.Path]::IsPathRooted($wallpaper)) { $wallpaper = Join-Path $PSScriptRoot $wallpaper }
-    Copy-Item $wallpaper (Join-Path $dir 'wallpaper.jpg') -Force
+    Copy-Item (Resolve-Asset $Theme.Wallpaper) (Join-Path $dir 'wallpaper.jpg') -Force
 
     $c = ConvertFrom-HexColor $Theme.AccentColor
     $colorization = '0XC4{0:X2}{1:X2}{2:X2}' -f $c.R, $c.G, $c.B
@@ -501,15 +535,28 @@ try {
     Export-WindowsImage -SourceImagePath $single -SourceIndex 1 -DestinationImagePath $wim -CompressionType Max | Out-Null
     Remove-Item $single -Force
 
-    if ($config.BypassHardwareChecks) {
-        Write-Step 'Contournement des verifications dans le programme d''installation (boot.wim)'
+    $setupTheme = $config.Theme.Enabled -and $config.Theme.SetupBackground
+    if ($config.BypassHardwareChecks -or $setupTheme) {
+        Write-Step 'Personnalisation du programme d''installation (boot.wim)'
         $boot = Join-Path $sources 'boot.wim'
         Mount-WindowsImage -ImagePath $boot -Index 2 -Path $mountDir | Out-Null
         $wimMounted = $true
-        Mount-OfflineHives $mountDir
-        try { Set-HardwareBypass } finally { Dismount-OfflineHives }
+        if ($config.BypassHardwareChecks) {
+            Write-Host '  - Contournement TPM / Secure Boot / RAM / CPU'
+            Mount-OfflineHives $mountDir
+            try { Set-HardwareBypass } finally { Dismount-OfflineHives }
+        }
+        if ($setupTheme) {
+            Write-Host '  - Fond d''ecran futuriste'
+            Update-SetupBackgrounds (Join-Path $mountDir 'sources') (Resolve-Asset $config.Theme.SetupBackground)
+        }
         Dismount-WindowsImage -Path $mountDir -Save | Out-Null
         $wimMounted = $false
+    }
+
+    if ($setupTheme) {
+        # Fonds utilises quand l'installation est lancee depuis Windows (setup.exe).
+        Update-SetupBackgrounds $sources (Resolve-Asset $config.Theme.SetupBackground)
     }
 
     if ($config.AllowLocalAccount -or $config.Theme.Enabled) {

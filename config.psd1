@@ -68,6 +68,9 @@
         AccentColor = '#00D4FF'                  # cyan neon ; essaie '#FF2BD6' pour du rose
         Wallpaper   = 'assets\wallpaper.jpg'    # remplace par ton image (JPG) si tu veux
 
+        # Fond d'ecran du programme d'installation de Windows (avec le titre NOVA OS).
+        SetupBackground = 'assets\setup.jpg'
+
         # Style "liquid glass" : barre des taches plus transparente et effets de verre natifs.
         GlassEffects = $true
 

@@ -29,12 +29,16 @@ Tout est réglable dans [`config.psd1`](config.psd1) (mets `$false` pour désact
 | `RemoveOneDrive` | oui | OneDrive ne s'installe plus à la première connexion. |
 | `RemoveEdge` | non | Supprime Edge. Désactivé par défaut car certaines applis dépendent de WebView2. |
 | `Theme` | oui | Mode sombre, transparence, accent cyan néon (`AccentColor`), fond d'écran Nova-Os sur le bureau et l'écran de verrouillage. Mets ta propre image dans `Wallpaper` si tu veux. |
+| `Theme.SetupBackground` | `assets/setup.jpg` | Fond néon « NOVA OS » dans le programme d'installation de Windows (au démarrage sur la clé USB et via setup.exe). |
 | `Theme.GlassEffects` | oui | Style « liquid glass » : barre des tâches plus transparente, effets de verre natifs. |
 | `Theme.GlassApps` | TranslucentTB, Mica For Everyone | Installées automatiquement (winget) à la première connexion, si Internet est disponible : barre des tâches en verre et fond acrylique flou sur les fenêtres. Leurs réglages se changent dans leurs propres paramètres. Journal : `%LOCALAPPDATA%\NovaOS-FirstLogon.log`. |
 | `GamingTweaks` | oui | Mode Jeu actif, enregistrement Game DVR coupé, planification GPU matérielle, priorité CPU/GPU aux jeux, souris sans accélération. |
 | `UltimatePerformance` | oui | Active le mode d'alimentation « Performances optimales » au premier démarrage (moins d'autonomie sur portable). |
 | `DisableVBS` | non | Coupe l'intégrité de la mémoire : quelques FPS en plus, mais moins de protection. À activer en connaissance de cause. |
 | `CleanupComponentStore` | oui | Réduit la taille de l'image (les mises à jour intégrées ne seront plus désinstallables). |
+
+Deux écrans ne peuvent pas être personnalisés : le logo du fabricant au démarrage (il vient du BIOS/UEFI)
+et les écrans de configuration de la première mise en route (OOBE), dessinés par Windows.
 
 ## Prérequis
 
@@ -70,6 +74,7 @@ Options utiles :
 - `Build-NovaOS.ps1` : le script de construction.
 - `config.psd1` : la liste des modifications.
 - `assets/wallpaper.jpg` : le fond d'écran futuriste (3840×2160).
+- `assets/setup.jpg` : le fond du programme d'installation.
 
 Le script ajoute aussi dans l'ISO un `autounattend.xml` (compte local et thème par défaut) et,
 si `UltimatePerformance` est actif, un `SetupComplete.cmd` qui règle l'alimentation après l'installation.
