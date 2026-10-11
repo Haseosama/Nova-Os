@@ -57,7 +57,7 @@ function Set-NovaOfflineDword {
         [Parameter(Mandatory = $true)][int]$Value
     )
     $null = & reg.exe add $Key /v $Name /t REG_DWORD /d $Value /f 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "Échec de l’écriture du paramètre registre $Key\$Name." }
+    if ($LASTEXITCODE -ne 0) { throw "Échec de l'écriture du paramètre registre $Key\$Name." }
 }
 
 
@@ -129,19 +129,19 @@ foreach ($oc in $requiredOCs) {
 $sourceImages = Get-WindowsImage -ImagePath $sourceInstallWim
 $selectedSourceImage = $sourceImages | Where-Object { $_.ImageIndex -eq 6 } | Select-Object -First 1
 if (-not $selectedSourceImage) {
-    throw 'L’index 6 est absent du install.wim source. Aucun média n’a été modifié.'
+    throw "L'index 6 est absent du install.wim source. Aucun média n'a été modifié."
 }
 $bootImages = Get-WindowsImage -ImagePath $sourceBootWim
 if (-not ($bootImages | Where-Object { $_.ImageIndex -eq 2 })) {
-    throw 'L’index 2 du boot.wim (Windows Setup) est introuvable.'
+    throw "L'index 2 du boot.wim (Windows Setup) est introuvable."
 }
 
 $OutputIso = [IO.Path]::GetFullPath($OutputIso)
 $WorkDir = [IO.Path]::GetFullPath($WorkDir)
 $outputDirectory = Split-Path -Parent $OutputIso
-if ([string]::IsNullOrWhiteSpace($outputDirectory)) { throw 'Le chemin de sortie de l’ISO est invalide.' }
+if ([string]::IsNullOrWhiteSpace($outputDirectory)) { throw "Le chemin de sortie de l'ISO est invalide." }
 if (Test-Path -LiteralPath $OutputIso) {
-    throw "Le fichier de sortie existe déjà : $OutputIso. Choisissez un autre nom pour éviter de l’écraser."
+    throw "Le fichier de sortie existe déjà : $OutputIso. Choisissez un autre nom pour éviter de l'écraser."
 }
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null
@@ -172,8 +172,8 @@ Write-Host ''
 Write-Host 'NovaOS — préparation du média Windows 11 Professionnel' -ForegroundColor Cyan
 Write-Host "Source monté : $sourceRoot"
 Write-Host "Édition sélectionnée : index 6 — $($selectedSourceImage.ImageName)"
-Write-Host 'Actions : garder uniquement l’index 6, appliquer des réglages prudents, ajouter un lanceur WinPE sombre.'
-Write-Host 'Le média source reste intact. Le partitionnement, l’activation et l’assistant Windows restent manuels.'
+Write-Host "Actions : garder uniquement l'index 6, appliquer des réglages prudents, ajouter un lanceur WinPE sombre."
+Write-Host "Le média source reste intact. Le partitionnement, l'activation et l'assistant Windows restent manuels."
 Write-Host "Espace libre requis : au moins $MinimumFreeSpaceGB Go."
 Write-Host "Sortie prévue : $OutputIso"
 $confirmation = Read-Host 'Pour continuer après vérification, tapez BUILD'
@@ -192,7 +192,7 @@ try {
     $robocopyCode = $LASTEXITCODE
     if ($robocopyCode -ge 8) { throw "Robocopy a échoué avec le code $robocopyCode. Consultez $buildRoot\Robocopy.log" }
 
-    Write-Host '2/5 — Export de l’index 6 uniquement...' -ForegroundColor Cyan
+    Write-Host "2/5 — Export de l'index 6 uniquement..." -ForegroundColor Cyan
     if (Test-Path -LiteralPath $stagedInstallWim) { Remove-Item -LiteralPath $stagedInstallWim -Force }
     $null = & $dismExe '/Export-Image' "/SourceImageFile:$sourceInstallWim" '/SourceIndex:6' "/DestinationImageFile:$stagedInstallWim" '/Compress:max' '/CheckIntegrity' '/DestinationName:Windows 11 Pro - NovaOS' '/DestinationDescription:Windows 11 Professional personnalisé par NovaOS'
     if ($LASTEXITCODE -ne 0) { throw "DISM Export-Image a échoué (code $LASTEXITCODE)." }
@@ -253,7 +253,7 @@ try {
         Set-NovaOfflineDword -Key "$machinePolicy\Windows Search" -Name 'DisableWebSearch' -Value 1
     } finally {
         $null = & reg.exe unload $softwareMountName 2>&1
-        if ($LASTEXITCODE -ne 0) { Write-Warning 'La ruche SOFTWARE n’a pas été déchargée normalement. Redémarrez avant de supprimer le dossier de travail.' }
+        if ($LASTEXITCODE -ne 0) { Write-Warning "La ruche SOFTWARE n'a pas été déchargée normalement. Redémarrez avant de supprimer le dossier de travail." }
     }
 
     $defaultUserHive = Join-Path $installMount 'Users\Default\NTUSER.DAT'
@@ -273,16 +273,16 @@ try {
             Set-NovaOfflineDword -Key "$defaultSoftware\ContentDeliveryManager" -Name 'SubscribedContent-353694Enabled' -Value 0
         } finally {
             $null = & reg.exe unload $defaultMountName 2>&1
-            if ($LASTEXITCODE -ne 0) { Write-Warning 'La ruche utilisateur par défaut n’a pas été déchargée normalement.' }
+            if ($LASTEXITCODE -ne 0) { Write-Warning "La ruche utilisateur par défaut n'a pas été déchargée normalement." }
         }
     } else {
-        Write-Warning 'NTUSER.DAT du profil par défaut introuvable ; le thème sombre sera à activer après l’installation.'
+        Write-Warning "NTUSER.DAT du profil par défaut introuvable ; le thème sombre sera à activer après l'installation."
     }
 
     Dismount-WindowsImage -Path $installMount -Save -CheckIntegrity | Out-Null
     $installMounted = $false
 
-    Write-Host '4/5 — Ajout de l’écran de bienvenue NovaOS à WinPE...' -ForegroundColor Cyan
+    Write-Host "4/5 — Ajout de l'écran de bienvenue NovaOS à WinPE..." -ForegroundColor Cyan
     Mount-WindowsImage -ImagePath $stagedBootWim -Index 2 -Path $bootMount -CheckIntegrity | Out-Null
     $bootMounted = $true
 
@@ -447,14 +447,14 @@ Retail
     $volumeLabel = 'NOVAOS_W11_PRO'
     $volumeOption = '-l' + $volumeLabel
     & $oscdimgExe '-m' '-o' '-u2' '-udfver102' $volumeOption $bootData $stagingMedia $OutputIso
-    if ($LASTEXITCODE -ne 0) { throw "oscdimg.exe a échoué (code $LASTEXITCODE). L’espace de travail est conservé dans $buildRoot" }
+    if ($LASTEXITCODE -ne 0) { throw "oscdimg.exe a échoué (code $LASTEXITCODE). L'espace de travail est conservé dans $buildRoot" }
 
     Write-Host ''
     Write-Host 'Build terminé.' -ForegroundColor Green
     Write-Host "ISO : $OutputIso" -ForegroundColor Green
     Write-Host "Journal : $logPath"
     Write-Host "Espace de travail conservé : $buildRoot"
-    Write-Host 'Testez l’ISO dans une machine virtuelle avant toute installation réelle.' -ForegroundColor Yellow
+    Write-Host "Testez l'ISO dans une machine virtuelle avant toute installation réelle." -ForegroundColor Yellow
 } finally {
     if ($installMounted) {
         try { Dismount-WindowsImage -Path $installMount -Discard -ErrorAction Stop | Out-Null }
