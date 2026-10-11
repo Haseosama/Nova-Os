@@ -64,6 +64,7 @@ Pour éviter la question : `-ImageIndex 6` (par exemple pour Pro).
 
 Options utiles :
 
+- `-SourceDir D:\Win11` à la place de `-IsoPath` : partir d'un ISO déjà décompressé (le dossier n'est pas modifié).
 - `-OutputIso D:\Nova-Os.iso` : choisir où écrire l'ISO.
 - `-WorkDir D:\nova-work` : dossier de travail sur un autre disque.
 - `-OscdimgPath C:\outils\oscdimg.exe` : si l'ADK est installé ailleurs.

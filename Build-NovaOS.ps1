@@ -11,6 +11,10 @@
 .PARAMETER IsoPath
     Chemin de l'ISO Windows 11 d'origine.
 
+.PARAMETER SourceDir
+    A la place de -IsoPath : dossier ou le contenu de l'ISO a deja ete decompresse.
+    Il est copie dans le dossier de travail et n'est jamais modifie.
+
 .PARAMETER OutputIso
     Chemin de l'ISO a produire. Par defaut : .\out\Nova-Os.iso
 
@@ -28,10 +32,14 @@
 
 .EXAMPLE
     .\Build-NovaOS.ps1 -IsoPath D:\ISO\Win11_24H2_French_x64.iso
+
+.EXAMPLE
+    .\Build-NovaOS.ps1 -SourceDir D:\ISO\Win11_decompresse
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)] [string] $IsoPath,
+    [Parameter(Mandatory, ParameterSetName = 'Iso')]    [string] $IsoPath,
+    [Parameter(Mandatory, ParameterSetName = 'Folder')] [string] $SourceDir,
     [string] $OutputIso = (Join-Path $PSScriptRoot 'out\Nova-Os.iso'),
     [int]    $ImageIndex,
     [string] $ConfigPath = (Join-Path $PSScriptRoot 'config.psd1'),
@@ -484,7 +492,7 @@ ou passe son chemin avec -OscdimgPath.
 # ---------------------------------------------------------------------------
 
 $config     = Import-PowerShellDataFile $ConfigPath
-$IsoPath    = (Resolve-Path $IsoPath).Path
+if ($IsoPath) { $IsoPath = (Resolve-Path $IsoPath).Path }
 $oscdimg    = Find-Oscdimg $OscdimgPath
 $isoDir     = Join-Path $WorkDir 'iso'
 $mountDir   = Join-Path $WorkDir 'mount'
@@ -499,16 +507,24 @@ try {
         if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
     }
 
-    Write-Step "Montage de $IsoPath"
-    $disk = Mount-DiskImage -ImagePath $IsoPath -PassThru
-    $isoMounted = $true
-    $drive = ($disk | Get-Volume).DriveLetter + ':'
+    if ($SourceDir) {
+        $SourceDir = (Resolve-Path $SourceDir).Path
+        if (-not (Test-Path (Join-Path $SourceDir 'sources'))) { throw "Pas de dossier 'sources' dans $SourceDir : ce n'est pas le contenu d'un ISO Windows." }
+        Write-Step "Copie du dossier decompresse $SourceDir"
+        Copy-Item "$SourceDir\*" $isoDir -Recurse -Force
+    }
+    else {
+        Write-Step "Montage de $IsoPath"
+        $disk = Mount-DiskImage -ImagePath $IsoPath -PassThru
+        $isoMounted = $true
+        $drive = ($disk | Get-Volume).DriveLetter + ':'
 
-    Write-Step 'Copie du contenu de l''ISO'
-    Copy-Item "$drive\*" $isoDir -Recurse -Force
+        Write-Step 'Copie du contenu de l''ISO'
+        Copy-Item "$drive\*" $isoDir -Recurse -Force
+        Dismount-DiskImage -ImagePath $IsoPath | Out-Null
+        $isoMounted = $false
+    }
     Get-ChildItem $isoDir -Recurse -File | ForEach-Object { $_.IsReadOnly = $false }
-    Dismount-DiskImage -ImagePath $IsoPath | Out-Null
-    $isoMounted = $false
 
     $sources = Join-Path $isoDir 'sources'
     $wim     = Join-Path $sources 'install.wim'
