@@ -194,8 +194,11 @@ try {
 
     Write-Host "2/5 — Export de l'index 6 uniquement..." -ForegroundColor Cyan
     if (Test-Path -LiteralPath $stagedInstallWim) { Remove-Item -LiteralPath $stagedInstallWim -Force }
-    $null = & $dismExe '/Export-Image' "/SourceImageFile:$sourceInstallWim" '/SourceIndex:6' "/DestinationImageFile:$stagedInstallWim" '/Compress:max' '/CheckIntegrity' '/DestinationName:Windows 11 Pro - NovaOS' '/DestinationDescription:Windows 11 Professional personnalisé par NovaOS'
-    if ($LASTEXITCODE -ne 0) { throw "DISM Export-Image a échoué (code $LASTEXITCODE)." }
+    try {
+        Export-WindowsImage -SourceImagePath $sourceInstallWim -SourceIndex 6 -DestinationImagePath $stagedInstallWim -CompressionType Max -CheckIntegrity -ErrorAction Stop | Out-Null
+    } catch {
+        throw "L'export de l'image avec DISM a échoué : $($_.Exception.Message)"
+    }
 
     Write-Host '3/5 — Maintenance de Windows 11 Pro (index de sortie 1)...' -ForegroundColor Cyan
     Mount-WindowsImage -ImagePath $stagedInstallWim -Index 1 -Path $installMount -CheckIntegrity | Out-Null
