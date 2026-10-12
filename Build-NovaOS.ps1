@@ -453,7 +453,7 @@ function Add-Apps([string] $Dir, $Apps) {
         }
         Get-ChildItem $target -Directory | Remove-Item -Recurse -Force
         $file = Get-ChildItem $target -File | Where-Object Extension -in $script:InstallerTypes | Select-Object -First 1
-        if (-not $file -and $id -eq 'TorchGM.RoundedTB') { $file = Get-GitHubRelease 'torchgm/RoundedTB' $target }
+        if (-not $file -and $id -eq 'TorchGM.RoundedTB') { $file = Get-GitHubRelease 'RoundedTB/RoundedTB' $target }
         if (-not $file) { Write-Warning "$id : telechargement winget impossible (code $LASTEXITCODE), ignore."; Remove-Item $target -Recurse -Force; continue }
         $manifest = Get-ChildItem $target -Filter *.yaml | Select-Object -First 1
         $arguments = Get-SilentArguments $file.FullName $(if ($manifest) { $manifest.FullName })
