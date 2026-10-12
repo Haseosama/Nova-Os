@@ -23,7 +23,7 @@ public static extern IntPtr LocalFree(IntPtr mem);
 '@ -ErrorAction SilentlyContinue
 
 function Invoke-WimImage([string] $Path, [int] $Index, [bool] $Write, [scriptblock] $Action) {
-    $access = if ($Write) { [uint32]0xC0000000 } else { [uint32]0x80000000 }   # lecture (+ ecriture)
+    $access = if ($Write) { [uint32]3221225472 } else { [uint32]2147483648 }   # lecture (+ ecriture)
     $created = [uint32]0
     $wim = [NovaOS.Wim]::WIMCreateFile($Path, $access, 3, 0, 0, [ref]$created)   # 3 = ouvrir l'existant
     if ($wim -eq [IntPtr]::Zero) { throw "Impossible d'ouvrir $Path (erreur $([Runtime.InteropServices.Marshal]::GetLastWin32Error()))." }
