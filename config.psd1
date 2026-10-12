@@ -1,4 +1,4 @@
-# Configuration de Nova-Os.
+﻿# Configuration de Nova-Os.
 # Mets une option a $false pour la desactiver. Ce fichier est lu par Build-NovaOS.ps1.
 @{
     # Applications preinstallees a supprimer de l'image (correspondance partielle sur le nom du paquet).
@@ -116,6 +116,21 @@
         # Barre des taches arrondie et retrecie avec RoundedTB (seule appli tierce, open source,
         # tres legere). Installee a la connexion si Internet est disponible. $false pour la retirer.
         RoundedTaskbar = $true
+    }
+
+    # --- Applications ------------------------------------------------------
+    # Telechargees avec winget pendant la construction de l'ISO, puis installees en silence
+    # pendant l'installation de Windows (pas besoin d'Internet sur le PC installe).
+    Apps = @{
+        Enabled = $true
+        Winget  = @(
+            'CodecGuide.K-LiteCodecPack.Mega'   # K-Lite Mega Codec Pack
+            'AppWork.JDownloader'               # JDownloader 2
+            'MoritzBunkus.MKVToolNix'           # MKVToolNix
+            'XMediaRecode.XMediaRecode'         # XMedia Recode
+        )
+        # Tes propres installeurs (.exe Inno Setup / NSIS, ou .msi) : depose-les dans ce dossier.
+        Folder  = 'D:\NovaOS\installers'
     }
 
     # --- Identite Nova-Os -------------------------------------------------

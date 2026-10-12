@@ -4,7 +4,8 @@
     Construit l'ISO Nova-Os a partir d'un ISO officiel de Windows 11.
 
 .DESCRIPTION
-    L'image Windows (install.wim) n'est pas modifiee et aucune application tierce n'est installee.
+    L'image Windows (install.wim) n'est pas modifiee. Les applications de config.psd1 (Apps) sont
+    telechargees a la construction et installees en silence pendant l'installation de Windows.
     Le script ajoute a l'ISO :
       - sources\$OEM$\$$\NovaOS : fond d'ecran, theme, logo et scripts, que l'installation de
         Windows copie elle-meme dans C:\Windows\NovaOS ;
@@ -389,6 +390,56 @@ function Set-GamingTweaks {
 # Charge utile copiee dans C:\Windows\NovaOS par l'installation
 # ---------------------------------------------------------------------------
 
+function Get-SilentArguments([string] $File, [string] $Manifest) {
+    # Options d'installation silencieuse : celles du manifeste winget, sinon selon le type d'installeur.
+    if ($Manifest) {
+        $silent = Select-String -Path $Manifest -Pattern '^\s*Silent:\s*(.+)$' | Select-Object -First 1
+        if ($silent) { return $silent.Matches[0].Groups[1].Value.Trim().Trim("'").Trim('"') }
+    }
+    if ($File -like '*.msi') { return '/qn /norestart' }
+    $stream = [IO.File]::OpenRead($File)
+    try {
+        $buffer = New-Object byte[] ([Math]::Min($stream.Length, 16MB))
+        $read = $stream.Read($buffer, 0, $buffer.Length)
+        $text = [Text.Encoding]::GetEncoding(28591).GetString($buffer, 0, $read)
+    }
+    finally { $stream.Dispose() }
+    if ($text.Contains('Inno Setup')) { return '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' }
+    if ($text.Contains('Nullsoft')) { return '/S' }
+    if ($text.Contains('install4j')) { return '-q' }
+    return $null
+}
+
+function Add-Apps([string] $Dir, $Apps) {
+    # Telecharge (winget) ou copie les installeurs dans la charge utile ; Specialize.ps1 les installe
+    # en silence pendant l'installation de Windows, sans Internet.
+    $appsDir = Join-Path $Dir 'Apps'
+    New-Item -ItemType Directory -Force -Path $appsDir | Out-Null
+    $list = @()
+    foreach ($id in $Apps.Winget) {
+        $target = Join-Path $appsDir $id
+        New-Item -ItemType Directory -Force -Path $target | Out-Null
+        & winget download --id $id -e --source winget -d $target --accept-package-agreements --accept-source-agreements | Out-Null
+        $file = Get-ChildItem $target -File | Where-Object Extension -in '.exe', '.msi' | Select-Object -First 1
+        if (-not $file) { Write-Warning "$id : telechargement winget impossible (code $LASTEXITCODE), ignore."; Remove-Item $target -Recurse -Force; continue }
+        $manifest = Get-ChildItem $target -Filter *.yaml | Select-Object -First 1
+        $arguments = Get-SilentArguments $file.FullName $(if ($manifest) { $manifest.FullName })
+        Get-ChildItem $target -Filter *.yaml | Remove-Item -Force
+        $list += [pscustomobject]@{ Name = $id; File = "$id\$($file.Name)"; Arguments = $arguments }
+        Write-Host "  - $id ($($file.Name))"
+    }
+    if ($Apps.Folder -and (Test-Path $Apps.Folder)) {
+        foreach ($file in Get-ChildItem $Apps.Folder -File | Where-Object Extension -in '.exe', '.msi') {
+            $arguments = Get-SilentArguments $file.FullName $null
+            if ($null -eq $arguments) { Write-Warning "$($file.Name) : type d'installeur inconnu, ignore."; continue }
+            Copy-Item $file.FullName (Join-Path $appsDir $file.Name) -Force
+            $list += [pscustomobject]@{ Name = $file.BaseName; File = $file.Name; Arguments = $arguments }
+            Write-Host "  - $($file.Name)"
+        }
+    }
+    $list | Export-Csv (Join-Path $appsDir 'Apps.csv') -NoTypeInformation -Encoding UTF8
+}
+
 function New-Payload([string] $Dir, $Config) {
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
 
@@ -554,6 +605,19 @@ if (Test-Path `$pictures) {
         Copy-Item `$file.FullName `$dest -Force
         Write-Output "  `$(`$file.Name)"
     }
+}
+
+`$apps = '$NovaDir\Apps'
+if (Test-Path "`$apps\Apps.csv") {
+    Write-Output '== Applications Nova-Os'
+    foreach (`$app in Import-Csv "`$apps\Apps.csv") {
+        `$file = Join-Path `$apps `$app.File
+        if (`$file -like '*.msi') { `$process = Start-Process msiexec.exe "/i ``"`$file``" `$(`$app.Arguments)" -PassThru }
+        else { `$process = Start-Process `$file `$app.Arguments -PassThru }
+        if (-not `$process.WaitForExit(1200000)) { `$process | Stop-Process -Force; Write-Output "  `$(`$app.Name) : trop long, arrete" }
+        else { Write-Output "  `$(`$app.Name) : code `$(`$process.ExitCode)" }
+    }
+    Remove-Item `$apps -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 if ($power) {
@@ -745,6 +809,10 @@ try {
 
     Write-Step "Ajout de la charge utile Nova-Os ($OemNovaDir)"
     New-Payload (Join-Path $isoDir $OemNovaDir) $config
+    if ($config.Apps.Enabled) {
+        Write-Step 'Telechargement des applications Nova-Os'
+        Add-Apps (Join-Path $isoDir $OemNovaDir) $config.Apps
+    }
 
     $setupBackground = if ($config.Theme.Enabled -and $config.Theme.SetupBackground) { Resolve-Asset $config.Theme.SetupBackground }
     if ($setupBackground) {
