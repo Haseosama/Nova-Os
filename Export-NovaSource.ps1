@@ -37,6 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'WimImageInfo.ps1')
 
 function Write-Step([string] $Message) {
     Write-Host "`n==> $Message" -ForegroundColor Cyan
@@ -97,6 +98,9 @@ try {
         Exported    = (Get-Date).ToString('s')
     }
     $info | ConvertTo-Json | Set-Content (Join-Path $Destination 'source.json') -Encoding UTF8
+    # Fiche d'origine de l'image (edition, langue...), reutilisee par Build-FromSource.ps1.
+    try { Get-WimImageXml $installImage $image.ImageIndex | Set-Content (Join-Path $Destination 'image.xml') -Encoding Unicode }
+    catch { Write-Warning "Fiche de l'image non sauvegardee : $($_.Exception.Message)" }
 
     @"
 # Windows 11 decompresse ($($image.ImageName))

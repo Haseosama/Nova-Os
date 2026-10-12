@@ -19,6 +19,10 @@
 .PARAMETER NovaOS
     Applique en plus les reglages Nova-Os (config.psd1) avec Build-NovaOS.ps1.
 
+.PARAMETER OriginalIso
+    ISO Microsoft d'origine, pour recopier l'identite de l'edition (Pro...) dans install.wim si
+    DISM ne l'a pas fait et que le dossier n'a pas de image.xml.
+
 .PARAMETER OscdimgPath
     Chemin de oscdimg.exe si le Windows ADK n'est pas installe a l'emplacement standard.
 #>
@@ -28,10 +32,12 @@ param(
     [string] $OutputIso = 'D:\NovaOS\Nova-Os-source.iso',
     [string] $WorkDir = 'D:\NovaOS\work-source',
     [switch] $NovaOS,
+    [string] $OriginalIso,
     [string] $OscdimgPath
 )
 
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'WimImageInfo.ps1')
 
 function Write-Step([string] $Message) {
     Write-Host "`n==> $Message" -ForegroundColor Cyan
@@ -90,7 +96,29 @@ Invoke-Dism $capture
 $captured = Get-WindowsImage -ImagePath (Join-Path $sources 'install.wim') -Index 1
 Write-Host "  Edition : $($captured.EditionId), version $($captured.Version)"
 if ($info.EditionId -and $captured.EditionId -ne $info.EditionId) {
-    Write-Warning "L'edition de install.wim ($($captured.EditionId)) ne correspond pas a l'original ($($info.EditionId)) : l'installation risque de ne proposer aucune image."
+    # DISM n'a pas pu lire le registre de l'image : on recopie la fiche de l'image d'origine.
+    $originalXml = $null
+    $saved = Join-Path $Source 'image.xml'
+    if (Test-Path $saved) { $originalXml = Get-Content $saved -Raw -Encoding Unicode }
+    elseif ($OriginalIso) {
+        $iso = (Resolve-Path $OriginalIso).Path
+        $drive = (Mount-DiskImage -ImagePath $iso -PassThru | Get-Volume).DriveLetter + ':'
+        try {
+            $wim = @("$drive\sources\install.wim", "$drive\sources\install.esd") | Where-Object { Test-Path $_ } | Select-Object -First 1
+            $match = Get-WindowsImage -ImagePath $wim | Where-Object ImageName -eq $info.Edition | Select-Object -First 1
+            if ($match) { $originalXml = Get-WimImageXml $wim $match.ImageIndex }
+        }
+        finally { Dismount-DiskImage -ImagePath $iso | Out-Null }
+    }
+    if ($originalXml) {
+        Write-Step 'Restauration de l''identite de l''edition dans install.wim'
+        Restore-WimImageIdentity (Join-Path $sources 'install.wim') 1 $originalXml
+        $captured = Get-WindowsImage -ImagePath (Join-Path $sources 'install.wim') -Index 1
+        Write-Host "  Edition : $($captured.EditionId), version $($captured.Version)"
+    }
+    if ($captured.EditionId -ne $info.EditionId) {
+        throw "install.wim n'a pas d'edition ($($captured.EditionId)) : l'installation ne proposerait aucune image. Relance avec -OriginalIso <ISO Microsoft d'origine>."
+    }
 }
 
 if ($NovaOS) {
