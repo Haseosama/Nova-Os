@@ -80,9 +80,28 @@ Options utiles :
 - `-OscdimgPath C:\outils\oscdimg.exe` : si l'ADK est installé ailleurs.
 - `-ConfigPath .\ma-config.psd1` : utiliser une autre configuration.
 
+## Décompresser Windows pour le modifier à la main
+
+Pour explorer et modifier Windows fichier par fichier, comme un dossier de code source, sur ton PC uniquement :
+
+```powershell
+.\Export-NovaSource.ps1 -IsoPath "C:\Chemin\vers\Win11.iso" -Destination D:\NovaOS\source
+```
+
+Le dossier contient `media\` (l'ISO), `winpe\` et `setup\` (boot.wim), `windows\` (install.wim, le futur `C:\`)
+et un `README.md` qui indique où trouver les fonds, thèmes, images de compte et registres. Prévois environ 40 Go.
+Pour refaire l'ISO après tes modifications :
+
+```powershell
+.\Build-FromSource.ps1 -Source D:\NovaOS\source -OutputIso D:\NovaOS\Nova-Os-source.iso -NovaOS
+```
+
+`-NovaOS` applique en plus les réglages de `config.psd1`.
+
 ## Fichiers
 
 - `Build-NovaOS.ps1` : le script de construction.
+- `Export-NovaSource.ps1` et `Build-FromSource.ps1` : décompresser Windows dans un dossier modifiable, puis refaire l'ISO.
 - `config.psd1` : la liste des modifications.
 - `assets/wallpaper.jpg` : le fond d'écran futuriste (3840×2160).
 - `assets/setup.jpg` : le fond du programme d'installation.
