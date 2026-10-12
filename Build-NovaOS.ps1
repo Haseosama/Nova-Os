@@ -145,6 +145,8 @@ function Set-SystemTweaks($Config) {
     if ($Config.DisableConsumerFeatures) {
         Write-Host '  - Applis suggerees desactivees'
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent' 'DisableWindowsConsumerFeatures' 1
+        # Pas de raccourci Edge sur le bureau.
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate' 'CreateDesktopShortcutDefault' 0
         # Widgets, recherche Bing dans Demarrer et recommandations.
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Dsh' 'AllowNewsAndInterests' 0
         Set-Reg "$DefaultUser\Software\Policies\Microsoft\Windows\Explorer" 'DisableSearchBoxSuggestions' 1
@@ -409,6 +411,22 @@ function New-Payload([string] $Dir, $Config) {
     $pins = @()
     ConvertTo-Json @{ pinnedList = $pins } -Depth 3 | Set-Content (Join-Path $Dir 'LayoutModification.json') -Encoding UTF8
 
+    # Barre des taches : Explorateur, Edge et Store, sans l'epingle Outlook ajoutee par Windows.
+    @'
+<?xml version="1.0" encoding="utf-8"?>
+<LayoutModificationTemplate xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification" xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" Version="1">
+  <CustomTaskbarLayoutCollection PinListPlacement="Replace">
+    <defaultlayout:TaskbarLayout>
+      <taskbar:TaskbarPinList>
+        <taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\File Explorer.lnk" />
+        <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" />
+        <taskbar:UWA AppUserModelID="Microsoft.WindowsStore_8wekyb3d8bbwe!App" />
+      </taskbar:TaskbarPinList>
+    </defaultlayout:TaskbarLayout>
+  </CustomTaskbarLayoutCollection>
+</LayoutModificationTemplate>
+'@ | Set-Content (Join-Path $Dir 'LayoutModification.xml') -Encoding UTF8
+
     # Cleanup.ps1 : a chaque connexion, retire les applis de la liste deja installees pour le compte
     # (celles que le Store installe tout seul apres l'installation, comme WhatsApp ou Xbox).
     $patterns = ($Config.RemoveApps | ForEach-Object { "'$_'" }) -join ', '
@@ -476,6 +494,8 @@ Write-Output '== Menu Demarrer'
 `$shell = 'C:\Users\Default\AppData\Local\Microsoft\Windows\Shell'
 New-Item -ItemType Directory -Force -Path `$shell | Out-Null
 Copy-Item '$NovaDir\LayoutModification.json' (Join-Path `$shell 'LayoutModification.json') -Force
+Copy-Item '$NovaDir\LayoutModification.xml' (Join-Path `$shell 'LayoutModification.xml') -Force
+Remove-Item "`$env:PUBLIC\Desktop\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
 Write-Output '  epingles Nova-Os'
 
 `$pictures = '$NovaDir\AccountPictures'
