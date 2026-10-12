@@ -112,6 +112,10 @@
         # Lance l'ancien programme d'installation, le seul qui affiche le fond Nova-Os
         # (le nouveau, depuis 24H2, garde son fond violet).
         LegacySetup = $true
+
+        # Barre des taches arrondie et retrecie avec RoundedTB (seule appli tierce, open source,
+        # tres legere). Installee a la connexion si Internet est disponible. $false pour la retirer.
+        RoundedTaskbar = $true
     }
 
     # --- Identite Nova-Os -------------------------------------------------

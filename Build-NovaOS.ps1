@@ -460,6 +460,32 @@ if ((Test-Path `$wallpaper) -and -not (Get-ItemProperty `$done -Name ThemeApplie
     Add-Content `$log "`$(Get-Date -Format s) fond d'ecran Nova-Os applique"
 }
 "@ | Set-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
+
+    if ($Config.Theme.RoundedTaskbar) {
+        # RoundedTB (open source) : barre des taches arrondie et retrecie. Installe avec winget a la
+        # connexion, tant que ce n'est pas fait (Internet requis). Seule appli tierce, a la demande.
+        @"
+
+# Barre des taches arrondie : RoundedTB.
+`$installed = Get-AppxPackage -Name '*RoundedTB*'
+if (-not `$installed -and -not (Get-ItemProperty `$done -Name RoundedTB -ErrorAction SilentlyContinue)) {
+    # winget n'est pret que quelques instants apres l'ouverture de la session.
+    for (`$i = 0; `$i -lt 30 -and -not (Get-Command winget -ErrorAction SilentlyContinue); `$i++) { Start-Sleep 10 }
+    winget install --id 9MTFTXSJ9M7F --source msstore --accept-package-agreements --accept-source-agreements --silent | Out-Null
+    if (`$LASTEXITCODE -ne 0) { winget install --id TorchGM.RoundedTB -e --accept-package-agreements --accept-source-agreements --silent | Out-Null }
+    if (`$LASTEXITCODE -eq 0) {
+        New-Item `$done -Force | Out-Null
+        Set-ItemProperty `$done -Name RoundedTB -Value 1
+        Add-Content `$log "`$(Get-Date -Format s) RoundedTB installe"
+        `$installed = Get-AppxPackage -Name '*RoundedTB*'
+    }
+    else { Add-Content `$log "`$(Get-Date -Format s) RoundedTB non installe (code `$LASTEXITCODE), nouvel essai a la prochaine connexion" }
+}
+if (`$installed -and -not (Get-Process RoundedTB -ErrorAction SilentlyContinue)) {
+    Start-Process "shell:AppsFolder\`$(`$installed[0].PackageFamilyName)!App" -ErrorAction SilentlyContinue
+}
+"@ | Add-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
+    }
     Set-RegString "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Run" 'NovaOSCleanup' `
         "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $NovaDir\Cleanup.ps1"
 
