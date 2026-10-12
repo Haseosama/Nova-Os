@@ -22,7 +22,8 @@
     Dossier de travail a creer. Par defaut : D:\NovaOS\source
 
 .PARAMETER Edition
-    Nom de l'edition a extraire de install.wim. Par defaut : Windows 11 Pro.
+    Edition a extraire de install.wim : son nom (ex. "Windows 11 Professionnel") ou son identifiant
+    (Professional, Core...). Par defaut : Professional, quelle que soit la langue de l'ISO.
 
 .EXAMPLE
     .\Export-NovaSource.ps1 -SourceDir "C:\Users\moi\Desktop\Nova\Win11" -Destination D:\NovaOS\source
@@ -32,7 +33,7 @@ param(
     [Parameter(Mandatory, ParameterSetName = 'Iso')]    [string] $IsoPath,
     [Parameter(Mandatory, ParameterSetName = 'Folder')] [string] $SourceDir,
     [string] $Destination = 'D:\NovaOS\source',
-    [string] $Edition = 'Windows 11 Pro'
+    [string] $Edition = 'Professional'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -77,7 +78,9 @@ try {
     Expand-WindowsImage -ImagePath $bootWim -Index 2 -ApplyPath $setup | Out-Null
 
     $images = Get-WindowsImage -ImagePath $installImage
-    $image = $images | Where-Object ImageName -eq $Edition | Select-Object -First 1
+    $image = $images | Where-Object {
+        $_.ImageName -eq $Edition -or (Get-WindowsImage -ImagePath $installImage -Index $_.ImageIndex).EditionId -eq $Edition
+    } | Select-Object -First 1
     if (-not $image) {
         Write-Host 'Editions disponibles :'
         $images | ForEach-Object { Write-Host "  $($_.ImageIndex) : $($_.ImageName)" }
