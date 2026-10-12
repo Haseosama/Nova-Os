@@ -334,6 +334,10 @@ function Set-ThemeTweaks($Theme) {
     Set-RegString 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes' 'InstallTheme' "$NovaDir\NovaOS.theme"
     Set-RegString "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Themes" 'CurrentTheme' "$NovaDir\NovaOS.theme"
 
+    # Barre des taches epuree : loupe de recherche seule, sans bouton Vue des taches.
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Search" 'SearchboxTaskbarMode' 1
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'ShowTaskViewButton' 0
+
     if ($Theme.GlassEffects) {
         # Barre des taches plus transparente (effet verre natif de Windows).
         Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'UseOLEDTaskbarTransparency' 1
