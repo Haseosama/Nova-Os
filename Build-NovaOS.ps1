@@ -149,7 +149,6 @@ function Set-SystemTweaks($Config) {
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Dsh' 'AllowNewsAndInterests' 0
         Set-Reg "$DefaultUser\Software\Policies\Microsoft\Windows\Explorer" 'DisableSearchBoxSuggestions' 1
         Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'Start_IrisRecommendations' 0
-        Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'TaskbarDa' 0
         $cdm = "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
         foreach ($name in 'SilentInstalledAppsEnabled', 'PreInstalledAppsEnabled', 'OemPreInstalledAppsEnabled',
                           'SystemPaneSuggestionsEnabled', 'SubscribedContent-338388Enabled', 'SubscribedContent-338389Enabled') {
