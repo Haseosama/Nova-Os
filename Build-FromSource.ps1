@@ -83,9 +83,15 @@ Invoke-Dism @('/Append-Image', "/ImageFile:$bootWim", "/CaptureDir:$(Join-Path $
 Write-Step "Compression de install.wim ($($info.Edition)) : c'est la plus longue etape"
 $capture = @('/Capture-Image', "/ImageFile:$(Join-Path $sources 'install.wim')", "/CaptureDir:$(Join-Path $Source 'windows')",
              "/Name:$($info.Edition)", "/Description:$($info.Description)", '/Compress:max')
-# L'edition (Professional, Core...) permet au programme d'installation de reconnaitre l'image.
-if ($info.EditionId) { $capture += "/Flags:$($info.EditionId)" }
 Invoke-Dism $capture
+
+# DISM lit l'edition (Professional...) dans le registre de l'image : le programme d'installation
+# en a besoin pour associer la cle produit a l'image.
+$captured = Get-WindowsImage -ImagePath (Join-Path $sources 'install.wim') -Index 1
+Write-Host "  Edition : $($captured.EditionId), version $($captured.Version)"
+if ($info.EditionId -and $captured.EditionId -ne $info.EditionId) {
+    Write-Warning "L'edition de install.wim ($($captured.EditionId)) ne correspond pas a l'original ($($info.EditionId)) : l'installation risque de ne proposer aucune image."
+}
 
 if ($NovaOS) {
     Write-Step 'Application des reglages Nova-Os'
