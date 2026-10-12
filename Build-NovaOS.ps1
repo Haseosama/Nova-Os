@@ -402,6 +402,42 @@ function New-Payload([string] $Dir, $Config) {
         }
     }
 
+    # Menu Demarrer des nouveaux comptes : uniquement les applis gardees, sans les raccourcis
+    # "suggeres" (WhatsApp, Instagram...) que Windows telecharge sinon a la premiere connexion.
+    $pins = @(
+        @{ desktopAppLink = '%APPDATA%\Microsoft\Windows\Start Menu\Programs\File Explorer.lnk' }
+        @{ packagedAppId = 'windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel' }
+        @{ packagedAppId = 'Microsoft.WindowsStore_8wekyb3d8bbwe!App' }
+        @{ desktopAppLink = '%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk' }
+        @{ packagedAppId = 'Microsoft.WindowsTerminal_8wekyb3d8bbwe!App' }
+        @{ packagedAppId = 'Microsoft.WindowsNotepad_8wekyb3d8bbwe!App' }
+        @{ packagedAppId = 'Microsoft.WindowsCalculator_8wekyb3d8bbwe!App' }
+        @{ packagedAppId = 'Microsoft.Windows.Photos_8wekyb3d8bbwe!App' }
+        @{ packagedAppId = 'Microsoft.Paint_8wekyb3d8bbwe!App' }
+        @{ packagedAppId = 'Microsoft.ScreenSketch_8wekyb3d8bbwe!App' }
+    )
+    @{ pinnedList = $pins } | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $Dir 'LayoutModification.json') -Encoding UTF8
+
+    # Cleanup.ps1 : a chaque connexion, retire les applis de la liste deja installees pour le compte
+    # (celles que le Store installe tout seul apres l'installation, comme WhatsApp ou Xbox).
+    $patterns = ($Config.RemoveApps | ForEach-Object { "'$_'" }) -join ', '
+    @"
+# Nova-Os : retire les applis indesirables du compte. Journal : %LOCALAPPDATA%\NovaOS-Cleanup.log
+`$patterns = @($patterns)
+`$log = Join-Path `$env:LOCALAPPDATA 'NovaOS-Cleanup.log'
+foreach (`$pattern in `$patterns) {
+    Get-AppxPackage -Name "*`$pattern*" | ForEach-Object {
+        try {
+            Remove-AppxPackage -Package `$_.PackageFullName -ErrorAction Stop
+            Add-Content `$log "`$(Get-Date -Format s) supprime : `$(`$_.Name)"
+        }
+        catch { Add-Content `$log "`$(Get-Date -Format s) ECHEC `$(`$_.Name) : `$(`$_.Exception.Message)" }
+    }
+}
+"@ | Set-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
+    Set-RegString "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Run" 'NovaOSCleanup' `
+        "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $NovaDir\Cleanup.ps1"
+
     # Registry.cmd : tous les reglages du registre, profil par defaut charge dans HKU\NovaDefault.
     $lines = @('@echo off',
                "reg load $DefaultUser C:\Users\Default\NTUSER.DAT >nul 2>&1 || echo ECHEC : chargement du profil par defaut") +
@@ -410,7 +446,6 @@ function New-Payload([string] $Dir, $Config) {
     $lines | Set-Content (Join-Path $Dir 'Registry.cmd') -Encoding Ascii
 
     # Specialize.ps1 : lance par autounattend.xml pendant l'installation, avant la creation du compte.
-    $patterns = ($Config.RemoveApps | ForEach-Object { "'$_'" }) -join ', '
     $power = if ($Config.UltimatePerformance) { '$true' } else { '$false' }
     @"
 # Nova-Os : applique pendant l'installation de Windows (passe specialize). Journal : Specialize.log
@@ -433,6 +468,12 @@ foreach (`$pattern in `$patterns) {
 Write-Output '== Registre'
 & cmd.exe /c '$NovaDir\Registry.cmd' 2>&1 | ForEach-Object { Write-Output "  `$_" }
 Write-Output '  termine'
+
+Write-Output '== Menu Demarrer'
+`$shell = 'C:\Users\Default\AppData\Local\Microsoft\Windows\Shell'
+New-Item -ItemType Directory -Force -Path `$shell | Out-Null
+Copy-Item '$NovaDir\LayoutModification.json' (Join-Path `$shell 'LayoutModification.json') -Force
+Write-Output '  epingles Nova-Os'
 
 `$pictures = '$NovaDir\AccountPictures'
 if (Test-Path `$pictures) {

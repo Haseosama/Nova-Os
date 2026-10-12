@@ -53,6 +53,17 @@
         'MicrosoftWindows.Client.WebExperience'   # Widgets
         'MicrosoftWindows.CrossDevice'
         'MSTeams'
+        # Applis "suggerees" que le Store installe a la premiere connexion.
+        '5319275A.WhatsAppDesktop'
+        'AmazonVideo.PrimeVideo'
+        'BytedancePte.Ltd.TikTok'
+        'Disney.37853FC22B2CE'               # Disney+
+        'Facebook.Facebook'
+        'Facebook.Instagram'
+        'king.com.'                          # Candy Crush...
+        '4DF9E0F8.Netflix'
+        'Microsoft.MicrosoftPCManager'
+        'SpotifyAB.SpotifyMusic'
     )
     # Conserves volontairement : Store, Calculatrice, Photos, Bloc-notes, Terminal, Paint, Capture d'ecran,
     # Camera, et la connexion Xbox (XboxIdentityProvider, Xbox.TCUI) dont certains jeux PC ont besoin.
