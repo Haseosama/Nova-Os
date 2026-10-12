@@ -404,7 +404,7 @@ function Get-SilentArguments([string] $File, [string] $Manifest) {
         $text = [Text.Encoding]::GetEncoding(28591).GetString($buffer, 0, $read)
     }
     finally { $stream.Dispose() }
-    if ($text.Contains('Inno Setup')) { return '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' }
+    if ($text.Contains('Inno Setup')) { return '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /ALLUSERS' }
     if ($text.Contains('Nullsoft')) { return '/S' }
     if ($text.Contains('install4j')) { return '-q' }
     return $null
@@ -420,10 +420,26 @@ function Add-Apps([string] $Dir, $Apps) {
         $target = Join-Path $appsDir $id
         New-Item -ItemType Directory -Force -Path $target | Out-Null
         & winget download --id $id -e --source winget -d $target --accept-package-agreements --accept-source-agreements | Out-Null
+        # Dependances fournies par winget (Visual C++...) : installees avant l'appli.
+        foreach ($dep in Get-ChildItem $target -Recurse -File | Where-Object { $_.DirectoryName -ne $target -and $_.Extension -in '.exe', '.msi' }) {
+            $depArgs = if ($dep.Name -like '*vc_redist*' -or $dep.Name -like '*Visual C++*') { '/install /quiet /norestart' } else { Get-SilentArguments $dep.FullName $null }
+            if ($null -eq $depArgs) { Write-Warning "$($dep.Name) : type d'installeur inconnu, ignore."; continue }
+            if ($list.File -notcontains $dep.Name -and -not ($list | Where-Object Name -eq $dep.Name)) {
+                Move-Item $dep.FullName (Join-Path $appsDir $dep.Name) -Force
+                $list += [pscustomobject]@{ Name = $dep.Name; File = $dep.Name; Arguments = $depArgs }
+                Write-Host "  - $($dep.Name) (dependance de $id)"
+            }
+        }
+        Get-ChildItem $target -Directory | Remove-Item -Recurse -Force
         $file = Get-ChildItem $target -File | Where-Object Extension -in '.exe', '.msi' | Select-Object -First 1
         if (-not $file) { Write-Warning "$id : telechargement winget impossible (code $LASTEXITCODE), ignore."; Remove-Item $target -Recurse -Force; continue }
         $manifest = Get-ChildItem $target -Filter *.yaml | Select-Object -First 1
         $arguments = Get-SilentArguments $file.FullName $(if ($manifest) { $manifest.FullName })
+        # Installeur install4j (JDownloader) : sans dossier impose, il s'installerait dans le profil
+        # du compte Systeme qui le lance pendant l'installation de Windows.
+        if ($arguments -match '(^|\s)-q(\s|$)' -and $arguments -notmatch '-dir') {
+            $arguments += " -dir `"C:\Program Files\$($id.Split('.')[-1])`""
+        }
         Get-ChildItem $target -Filter *.yaml | Remove-Item -Force
         $list += [pscustomobject]@{ Name = $id; File = "$id\$($file.Name)"; Arguments = $arguments }
         Write-Host "  - $id ($($file.Name))"
