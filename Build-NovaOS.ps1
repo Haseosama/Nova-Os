@@ -329,6 +329,9 @@ function Set-ThemeTweaks($Theme) {
     Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent" 'StartColorMenu' $abgr
     Set-RegString "$DefaultUser\Control Panel\Desktop" 'WallPaper' $wallpaper
     Set-RegString "$DefaultUser\Control Panel\Desktop" 'WallpaperStyle' '10'
+    # Theme Nova-Os par defaut pour chaque nouveau compte (en plus de autounattend.xml).
+    Set-RegString 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes' 'InstallTheme' "$NovaDir\NovaOS.theme"
+    Set-RegString "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Themes" 'CurrentTheme' "$NovaDir\NovaOS.theme"
 
     if ($Theme.GlassEffects) {
         # Barre des taches plus transparente (effet verre natif de Windows).
@@ -433,6 +436,18 @@ foreach (`$pattern in `$patterns) {
         }
         catch { Add-Content `$log "`$(Get-Date -Format s) ECHEC `$(`$_.Name) : `$(`$_.Exception.Message)" }
     }
+}
+
+# Fond d'ecran Nova-Os si Windows ne l'a pas applique (une seule fois par compte).
+`$wallpaper = '$NovaDir\wallpaper.jpg'
+`$done = 'HKCU:\Software\NovaOS'
+if ((Test-Path `$wallpaper) -and -not (Get-ItemProperty `$done -Name ThemeApplied -ErrorAction SilentlyContinue)) {
+    Set-ItemProperty 'HKCU:\Control Panel\Desktop' -Name WallpaperStyle -Value '10'
+    Add-Type -Namespace NovaOS -Name Desktop -MemberDefinition '[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool SystemParametersInfo(int action, int param, string value, int flags);'
+    [NovaOS.Desktop]::SystemParametersInfo(20, 0, `$wallpaper, 3) | Out-Null   # SPI_SETDESKWALLPAPER
+    New-Item `$done -Force | Out-Null
+    Set-ItemProperty `$done -Name ThemeApplied -Value 1
+    Add-Content `$log "`$(Get-Date -Format s) fond d'ecran Nova-Os applique"
 }
 "@ | Set-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
     Set-RegString "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Run" 'NovaOSCleanup' `
