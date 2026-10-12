@@ -108,6 +108,11 @@ function Set-SystemTweaks($Config) {
     if ($Config.DisableConsumerFeatures) {
         Write-Host '  - Applis suggerees desactivees'
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent' 'DisableWindowsConsumerFeatures' 1
+        # Widgets, recherche Bing dans Demarrer et recommandations.
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Dsh' 'AllowNewsAndInterests' 0
+        Set-Reg "$DefaultUser\Software\Policies\Microsoft\Windows\Explorer" 'DisableSearchBoxSuggestions' 1
+        Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'Start_IrisRecommendations' 0
+        Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'TaskbarDa' 0
         $cdm = "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
         foreach ($name in 'SilentInstalledAppsEnabled', 'PreInstalledAppsEnabled', 'OemPreInstalledAppsEnabled',
                           'SystemPaneSuggestionsEnabled', 'SubscribedContent-338388Enabled', 'SubscribedContent-338389Enabled') {
@@ -119,6 +124,9 @@ function Set-SystemTweaks($Config) {
         Write-Host '  - Copilot desactive'
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot' 'TurnOffWindowsCopilot' 1
         Set-Reg "$DefaultUser\Software\Policies\Microsoft\Windows\WindowsCopilot" 'TurnOffWindowsCopilot' 1
+        # Recall (captures d'ecran analysees par l'IA).
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' 'DisableAIDataAnalysis' 1
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' 'AllowRecallEnablement' 0
     }
 
     if ($Config.RemoveOneDrive) {

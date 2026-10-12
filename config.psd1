@@ -4,22 +4,39 @@
     # Applications preinstallees a supprimer de l'image (correspondance partielle sur le nom du paquet).
     # Retire une ligne pour garder l'application correspondante.
     RemoveApps = @(
+        '7EE7776C.LinkedInforWindows'        # LinkedIn
         'Clipchamp.Clipchamp'
         'Microsoft.549981C3F5F10'            # Cortana
+        'Microsoft.BingFinance'
         'Microsoft.BingNews'
         'Microsoft.BingSearch'
+        'Microsoft.BingSports'
+        'Microsoft.BingTranslator'
         'Microsoft.BingWeather'
         'Microsoft.Copilot'
+        'Microsoft.Edge.GameAssist'
         'Microsoft.GamingApp'
         'Microsoft.GetHelp'
-        'Microsoft.Getstarted'
+        'Microsoft.Getstarted'               # Astuces
+        'Microsoft.Messaging'
+        'Microsoft.Microsoft3DViewer'
+        'Microsoft.MicrosoftJournal'
         'Microsoft.MicrosoftOfficeHub'
         'Microsoft.MicrosoftSolitaireCollection'
+        'Microsoft.MixedReality.Portal'
+        'Microsoft.MSPaint'                  # Paint 3D (Paint classique garde)
+        'Microsoft.Office.OneNote'
+        'Microsoft.OneConnect'
         'Microsoft.OutlookForWindows'
         'Microsoft.People'
         'Microsoft.PowerAutomateDesktop'
+        'Microsoft.Print3D'
+        'Microsoft.SkypeApp'
         'Microsoft.Todos'
+        'Microsoft.Wallet'
+        'Microsoft.Windows.Ai.Copilot.Provider'
         'Microsoft.Windows.DevHome'
+        'Microsoft.WindowsAlarms'            # Horloge
         'Microsoft.WindowsFeedbackHub'
         'Microsoft.WindowsMaps'
         'Microsoft.WindowsSoundRecorder'
@@ -27,14 +44,18 @@
         'Microsoft.XboxGameOverlay'
         'Microsoft.XboxGamingOverlay'
         'Microsoft.XboxSpeechToTextOverlay'
-        'Microsoft.YourPhone'
-        'Microsoft.ZuneMusic'
-        'Microsoft.ZuneVideo'
+        'Microsoft.YourPhone'                # Mobile connecte
+        'Microsoft.ZuneMusic'                # Lecteur multimedia
+        'Microsoft.ZuneVideo'                # Films et TV
+        'MicrosoftCorporationII.MicrosoftFamily'
         'MicrosoftCorporationII.QuickAssist'
         'MicrosoftTeams'
+        'MicrosoftWindows.Client.WebExperience'   # Widgets
+        'MicrosoftWindows.CrossDevice'
         'MSTeams'
     )
-    # Conserves volontairement : Store, Calculatrice, Photos, Bloc-notes, Terminal, Paint, Capture d'ecran.
+    # Conserves volontairement : Store, Calculatrice, Photos, Bloc-notes, Terminal, Paint, Capture d'ecran,
+    # Camera, Pense-bete, et l'application Xbox (Microsoft.XboxIdentityProvider) utile pour certains jeux.
 
     # Cle d'installation generique publique de Microsoft (Windows 11 Pro) : elle evite l'ecran
     # "cle de produit" pendant l'installation mais N'ACTIVE PAS Windows. Mets '' pour la retirer,
