@@ -23,6 +23,7 @@
         'Microsoft.MicrosoftJournal'
         'Microsoft.MicrosoftOfficeHub'
         'Microsoft.MicrosoftSolitaireCollection'
+        'Microsoft.MicrosoftStickyNotes'     # Pense-betes
         'Microsoft.MixedReality.Portal'
         'Microsoft.MSPaint'                  # Paint 3D (Paint classique garde)
         'Microsoft.Office.OneNote'
@@ -40,7 +41,6 @@
         'Microsoft.WindowsFeedbackHub'
         'Microsoft.WindowsMaps'
         'Microsoft.WindowsSoundRecorder'
-        'Microsoft.Xbox.TCUI'
         'Microsoft.XboxGameOverlay'
         'Microsoft.XboxGamingOverlay'
         'Microsoft.XboxSpeechToTextOverlay'
@@ -55,7 +55,7 @@
         'MSTeams'
     )
     # Conserves volontairement : Store, Calculatrice, Photos, Bloc-notes, Terminal, Paint, Capture d'ecran,
-    # Camera, Pense-bete, et l'application Xbox (Microsoft.XboxIdentityProvider) utile pour certains jeux.
+    # Camera, et la connexion Xbox (XboxIdentityProvider, Xbox.TCUI) dont certains jeux PC ont besoin.
 
     # Cle d'installation generique publique de Microsoft (Windows 11 Pro) : elle evite l'ecran
     # "cle de produit" pendant l'installation mais N'ACTIVE PAS Windows. Mets '' pour la retirer,
