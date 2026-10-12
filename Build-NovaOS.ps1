@@ -390,7 +390,28 @@ function Set-GamingTweaks {
 # Charge utile copiee dans C:\Windows\NovaOS par l'installation
 # ---------------------------------------------------------------------------
 
+# Installeurs acceptes : programmes d'installation, paquets d'applis (MSIX) et applis portables (zip).
+$script:InstallerTypes = '.exe', '.msi', '.msix', '.msixbundle', '.appx', '.appxbundle', '.zip'
+
+function Get-GitHubRelease([string] $Repo, [string] $Target) {
+    # Repli quand winget ne fournit pas l'appli : derniere version publiee sur GitHub.
+    try {
+        $release = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/latest" -UseBasicParsing
+        $asset = foreach ($ext in '.msixbundle', '.msix', '.zip', '.exe') {
+            $release.assets | Where-Object name -like "*$ext" | Select-Object -First 1
+        }
+        $asset = $asset | Select-Object -First 1
+        if (-not $asset) { return $null }
+        $path = Join-Path $Target $asset.name
+        Invoke-WebRequest $asset.browser_download_url -OutFile $path -UseBasicParsing
+        return Get-Item $path
+    }
+    catch { Write-Warning "$Repo : telechargement GitHub impossible ($($_.Exception.Message))."; return $null }
+}
+
 function Get-SilentArguments([string] $File, [string] $Manifest) {
+    if ($File -match '\.(msix|msixbundle|appx|appxbundle)$') { return 'APPX' }
+    if ($File -like '*.zip') { return 'ZIP' }
     # Options d'installation silencieuse : celles du manifeste winget, sinon selon le type d'installeur.
     if ($Manifest) {
         $silent = Select-String -Path $Manifest -Pattern '^\s*Silent:\s*(.+)$' | Select-Object -First 1
@@ -421,7 +442,7 @@ function Add-Apps([string] $Dir, $Apps) {
         New-Item -ItemType Directory -Force -Path $target | Out-Null
         & winget download --id $id -e --source winget -d $target --accept-package-agreements --accept-source-agreements | Out-Null
         # Dependances fournies par winget (Visual C++...) : installees avant l'appli.
-        foreach ($dep in Get-ChildItem $target -Recurse -File | Where-Object { $_.DirectoryName -ne $target -and $_.Extension -in '.exe', '.msi' }) {
+        foreach ($dep in Get-ChildItem $target -Recurse -File | Where-Object { $_.DirectoryName -ne $target -and $_.Extension -in $script:InstallerTypes }) {
             $depArgs = if ($dep.Name -like '*vc_redist*' -or $dep.Name -like '*Visual C++*') { '/install /quiet /norestart' } else { Get-SilentArguments $dep.FullName $null }
             if ($null -eq $depArgs) { Write-Warning "$($dep.Name) : type d'installeur inconnu, ignore."; continue }
             if ($list.File -notcontains $dep.Name -and -not ($list | Where-Object Name -eq $dep.Name)) {
@@ -431,7 +452,8 @@ function Add-Apps([string] $Dir, $Apps) {
             }
         }
         Get-ChildItem $target -Directory | Remove-Item -Recurse -Force
-        $file = Get-ChildItem $target -File | Where-Object Extension -in '.exe', '.msi' | Select-Object -First 1
+        $file = Get-ChildItem $target -File | Where-Object Extension -in $script:InstallerTypes | Select-Object -First 1
+        if (-not $file -and $id -eq 'TorchGM.RoundedTB') { $file = Get-GitHubRelease 'torchgm/RoundedTB' $target }
         if (-not $file) { Write-Warning "$id : telechargement winget impossible (code $LASTEXITCODE), ignore."; Remove-Item $target -Recurse -Force; continue }
         $manifest = Get-ChildItem $target -Filter *.yaml | Select-Object -First 1
         $arguments = Get-SilentArguments $file.FullName $(if ($manifest) { $manifest.FullName })
@@ -529,38 +551,12 @@ if ((Test-Path `$wallpaper) -and -not (Get-ItemProperty `$done -Name ThemeApplie
 "@ | Set-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
 
     if ($Config.Theme.RoundedTaskbar) {
-        # RoundedTB (open source) : barre des taches arrondie et retrecie. Installe avec winget a la
-        # connexion, tant que ce n'est pas fait (Internet requis). Seule appli tierce, a la demande.
+        # RoundedTB (open source) : installe depuis l'ISO avec les autres applis (Apps), lance ici
+        # a chaque connexion s'il s'agit du paquet MSIX (la version portable a sa cle Run).
         @"
 
 # Barre des taches arrondie : RoundedTB.
 `$installed = Get-AppxPackage -Name '*RoundedTB*'
-if (-not `$installed -and -not (Get-ItemProperty `$done -Name RoundedTB -ErrorAction SilentlyContinue)) {
-    # Sur un compte neuf, winget (App Installer) n'est enregistre que quelques minutes apres la
-    # connexion : on le force, puis on attend qu'il reponde et qu'Internet soit la.
-    `$winget = Join-Path `$env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
-    for (`$i = 0; `$i -lt 60 -and -not (Test-Path `$winget); `$i++) {
-        if (`$i % 6 -eq 0) { Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe -ErrorAction SilentlyContinue }
-        Start-Sleep 10
-    }
-    for (`$i = 0; `$i -lt 30 -and -not (Test-Connection 1.1.1.1 -Count 1 -Quiet); `$i++) { Start-Sleep 10 }
-    if (-not (Test-Path `$winget)) { Add-Content `$log "`$(Get-Date -Format s) RoundedTB : winget introuvable" }
-    else {
-        `$out = & `$winget install --id 9MTFTXSJ9M7F --source msstore --accept-package-agreements --accept-source-agreements --silent 2>&1
-        Add-Content `$log "`$(Get-Date -Format s) winget msstore (code `$LASTEXITCODE) : `$((`$out | Select-Object -Last 3) -join ' ')"
-        if (`$LASTEXITCODE -ne 0) {
-            `$out = & `$winget install --id TorchGM.RoundedTB -e --source winget --accept-package-agreements --accept-source-agreements --silent 2>&1
-            Add-Content `$log "`$(Get-Date -Format s) winget (code `$LASTEXITCODE) : `$((`$out | Select-Object -Last 3) -join ' ')"
-        }
-    }
-    if (`$LASTEXITCODE -eq 0) {
-        New-Item `$done -Force | Out-Null
-        Set-ItemProperty `$done -Name RoundedTB -Value 1
-        Add-Content `$log "`$(Get-Date -Format s) RoundedTB installe"
-        `$installed = Get-AppxPackage -Name '*RoundedTB*'
-    }
-    else { Add-Content `$log "`$(Get-Date -Format s) RoundedTB non installe (code `$LASTEXITCODE), nouvel essai a la prochaine connexion" }
-}
 if (`$installed -and -not (Get-Process RoundedTB -ErrorAction SilentlyContinue)) {
     Start-Process "shell:AppsFolder\`$(`$installed[0].PackageFamilyName)!App" -ErrorAction SilentlyContinue
 }
@@ -628,6 +624,27 @@ if (Test-Path "`$apps\Apps.csv") {
     Write-Output '== Applications Nova-Os'
     foreach (`$app in Import-Csv "`$apps\Apps.csv") {
         `$file = Join-Path `$apps `$app.File
+        if (`$app.Arguments -eq 'APPX') {
+            # Paquet d'appli : provisionne pour tous les comptes.
+            try { Add-AppxProvisionedPackage -Online -PackagePath `$file -SkipLicense -ErrorAction Stop | Out-Null; Write-Output "  `$(`$app.Name) : provisionne" }
+            catch { Write-Output "  `$(`$app.Name) : ECHEC `$(`$_.Exception.Message)" }
+            continue
+        }
+        if (`$app.Arguments -eq 'ZIP') {
+            # Appli portable : copiee dans Program Files, lancee a chaque connexion.
+            `$name = (`$app.Name -split '\.')[-1]
+            `$dest = Join-Path `$env:ProgramFiles `$name
+            Expand-Archive `$file `$dest -Force
+            `$exe = Get-ChildItem `$dest -Recurse -Filter "`$name.exe" | Select-Object -First 1
+            if (-not `$exe) { `$exe = Get-ChildItem `$dest -Recurse -Filter *.exe | Select-Object -First 1 }
+            if (`$exe) {
+                New-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run' -Name `$name -Value "``"`$(`$exe.FullName)``"" -Force | Out-Null
+                `$link = (New-Object -ComObject WScript.Shell).CreateShortcut("`$env:ProgramData\Microsoft\Windows\Start Menu\Programs\`$name.lnk")
+                `$link.TargetPath = `$exe.FullName; `$link.Save()
+            }
+            Write-Output "  `$(`$app.Name) : copie dans `$dest"
+            continue
+        }
         if (`$file -like '*.msi') { `$process = Start-Process msiexec.exe "/i ``"`$file``" `$(`$app.Arguments)" -PassThru }
         else { `$process = Start-Process `$file `$app.Arguments -PassThru }
         if (-not `$process.WaitForExit(1200000)) { `$process | Stop-Process -Force; Write-Output "  `$(`$app.Name) : trop long, arrete" }
@@ -825,6 +842,11 @@ try {
 
     Write-Step "Ajout de la charge utile Nova-Os ($OemNovaDir)"
     New-Payload (Join-Path $isoDir $OemNovaDir) $config
+    if ($config.Theme.Enabled -and $config.Theme.RoundedTaskbar) {
+        if (-not $config.Apps) { $config.Apps = @{ Enabled = $true; Winget = @() } }
+        $config.Apps.Enabled = $true
+        $config.Apps.Winget = @($config.Apps.Winget) + 'TorchGM.RoundedTB'
+    }
     if ($config.Apps.Enabled) {
         Write-Step 'Telechargement des applications Nova-Os'
         Add-Apps (Join-Path $isoDir $OemNovaDir) $config.Apps

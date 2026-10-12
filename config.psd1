@@ -114,7 +114,7 @@
         LegacySetup = $true
 
         # Barre des taches arrondie et retrecie avec RoundedTB (seule appli tierce, open source,
-        # tres legere). Installee a la connexion si Internet est disponible. $false pour la retirer.
+        # tres legere). Ajoutee a l'ISO avec les autres applis, sans Internet. $false pour la retirer.
         RoundedTaskbar = $true
     }
 
