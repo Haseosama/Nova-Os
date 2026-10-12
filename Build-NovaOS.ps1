@@ -404,21 +404,10 @@ function New-Payload([string] $Dir, $Config) {
         }
     }
 
-    # Menu Demarrer des nouveaux comptes : uniquement les applis gardees, sans les raccourcis
-    # "suggeres" (WhatsApp, Instagram...) que Windows telecharge sinon a la premiere connexion.
-    $pins = @(
-        @{ desktopAppLink = '%APPDATA%\Microsoft\Windows\Start Menu\Programs\File Explorer.lnk' }
-        @{ packagedAppId = 'windows.immersivecontrolpanel_cw5n1h2txyewy!microsoft.windows.immersivecontrolpanel' }
-        @{ packagedAppId = 'Microsoft.WindowsStore_8wekyb3d8bbwe!App' }
-        @{ desktopAppLink = '%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk' }
-        @{ packagedAppId = 'Microsoft.WindowsTerminal_8wekyb3d8bbwe!App' }
-        @{ packagedAppId = 'Microsoft.WindowsNotepad_8wekyb3d8bbwe!App' }
-        @{ packagedAppId = 'Microsoft.WindowsCalculator_8wekyb3d8bbwe!App' }
-        @{ packagedAppId = 'Microsoft.Windows.Photos_8wekyb3d8bbwe!App' }
-        @{ packagedAppId = 'Microsoft.Paint_8wekyb3d8bbwe!App' }
-        @{ packagedAppId = 'Microsoft.ScreenSketch_8wekyb3d8bbwe!App' }
-    )
-    @{ pinnedList = $pins } | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $Dir 'LayoutModification.json') -Encoding UTF8
+    # Menu Demarrer des nouveaux comptes : aucune epingle, donc aucun raccourci "suggere"
+    # (WhatsApp, Xbox...) que Windows telecharge sinon a la premiere connexion.
+    $pins = @()
+    ConvertTo-Json @{ pinnedList = $pins } -Depth 3 | Set-Content (Join-Path $Dir 'LayoutModification.json') -Encoding UTF8
 
     # Cleanup.ps1 : a chaque connexion, retire les applis de la liste deja installees pour le compte
     # (celles que le Store installe tout seul apres l'installation, comme WhatsApp ou Xbox).
