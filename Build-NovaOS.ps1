@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
     Construit l'ISO Nova-Os a partir d'un ISO officiel de Windows 11.
@@ -469,10 +469,23 @@ if ((Test-Path `$wallpaper) -and -not (Get-ItemProperty `$done -Name ThemeApplie
 # Barre des taches arrondie : RoundedTB.
 `$installed = Get-AppxPackage -Name '*RoundedTB*'
 if (-not `$installed -and -not (Get-ItemProperty `$done -Name RoundedTB -ErrorAction SilentlyContinue)) {
-    # winget n'est pret que quelques instants apres l'ouverture de la session.
-    for (`$i = 0; `$i -lt 30 -and -not (Get-Command winget -ErrorAction SilentlyContinue); `$i++) { Start-Sleep 10 }
-    winget install --id 9MTFTXSJ9M7F --source msstore --accept-package-agreements --accept-source-agreements --silent | Out-Null
-    if (`$LASTEXITCODE -ne 0) { winget install --id TorchGM.RoundedTB -e --accept-package-agreements --accept-source-agreements --silent | Out-Null }
+    # Sur un compte neuf, winget (App Installer) n'est enregistre que quelques minutes apres la
+    # connexion : on le force, puis on attend qu'il reponde et qu'Internet soit la.
+    `$winget = Join-Path `$env:LOCALAPPDATA 'Microsoft\WindowsApps\winget.exe'
+    for (`$i = 0; `$i -lt 60 -and -not (Test-Path `$winget); `$i++) {
+        if (`$i % 6 -eq 0) { Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe -ErrorAction SilentlyContinue }
+        Start-Sleep 10
+    }
+    for (`$i = 0; `$i -lt 30 -and -not (Test-Connection 1.1.1.1 -Count 1 -Quiet); `$i++) { Start-Sleep 10 }
+    if (-not (Test-Path `$winget)) { Add-Content `$log "`$(Get-Date -Format s) RoundedTB : winget introuvable" }
+    else {
+        `$out = & `$winget install --id 9MTFTXSJ9M7F --source msstore --accept-package-agreements --accept-source-agreements --silent 2>&1
+        Add-Content `$log "`$(Get-Date -Format s) winget msstore (code `$LASTEXITCODE) : `$((`$out | Select-Object -Last 3) -join ' ')"
+        if (`$LASTEXITCODE -ne 0) {
+            `$out = & `$winget install --id TorchGM.RoundedTB -e --source winget --accept-package-agreements --accept-source-agreements --silent 2>&1
+            Add-Content `$log "`$(Get-Date -Format s) winget (code `$LASTEXITCODE) : `$((`$out | Select-Object -Last 3) -join ' ')"
+        }
+    }
     if (`$LASTEXITCODE -eq 0) {
         New-Item `$done -Force | Out-Null
         Set-ItemProperty `$done -Name RoundedTB -Value 1
