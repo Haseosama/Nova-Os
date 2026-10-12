@@ -548,6 +548,7 @@ if ((Test-Path `$wallpaper) -and -not (Get-ItemProperty `$done -Name ThemeApplie
     Set-ItemProperty `$done -Name ThemeApplied -Value 1
     Add-Content `$log "`$(Get-Date -Format s) fond d'ecran Nova-Os applique"
 }
+
 "@ | Set-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
 
     if ($Config.Theme.RoundedTaskbar) {
@@ -562,6 +563,22 @@ if (`$installed -and -not (Get-Process RoundedTB -ErrorAction SilentlyContinue))
 }
 "@ | Add-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
     }
+    # UserApps.ps1 : premiere connexion (FirstLogonCommands, en administrateur sous le compte cree) :
+    # installe les applis "par utilisateur" que le compte Systeme n'a pas pu installer.
+    @"
+# Nova-Os : applis installees a la premiere connexion. Journal : $NovaDir\UserApps.log
+`$userApps = '$NovaDir\UserApps'
+if (Test-Path "`$userApps\UserApps.csv") {
+    foreach (`$app in Import-Csv "`$userApps\UserApps.csv") {
+        `$arguments = `$app.Arguments
+        if (`$arguments -match '/VERYSILENT') { `$arguments += " /LOG=``"$NovaDir\`$(`$app.Name)-user-setup.log``"" }
+        `$process = Start-Process (Join-Path `$userApps `$app.File) `$arguments -PassThru
+        if (-not `$process.WaitForExit(1200000)) { `$process | Stop-Process -Force }
+        Add-Content '$NovaDir\UserApps.log' "`$(Get-Date -Format s) `$(`$app.Name) : code `$(`$process.ExitCode)"
+    }
+}
+"@ | Set-Content (Join-Path $Dir 'UserApps.ps1') -Encoding UTF8
+
     Set-RegString "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Run" 'NovaOSCleanup' `
         "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $NovaDir\Cleanup.ps1"
 
@@ -646,9 +663,24 @@ if (Test-Path "`$apps\Apps.csv") {
             continue
         }
         if (`$file -like '*.msi') { `$process = Start-Process msiexec.exe "/i ``"`$file``" `$(`$app.Arguments)" -PassThru }
-        else { `$process = Start-Process `$file `$app.Arguments -PassThru }
+        else {
+            `$arguments = `$app.Arguments
+            if (`$arguments -match '/VERYSILENT') { `$arguments += " /LOG=``"$NovaDir\`$(`$app.Name)-setup.log``"" }
+            `$process = Start-Process `$file `$arguments -PassThru
+        }
         if (-not `$process.WaitForExit(1200000)) { `$process | Stop-Process -Force; Write-Output "  `$(`$app.Name) : trop long, arrete" }
         else { Write-Output "  `$(`$app.Name) : code `$(`$process.ExitCode)" }
+        if (`$process.HasExited -and `$process.ExitCode -notin 0, 3010 -and `$file -notlike '*.msi') {
+            # Installeur qui refuse le compte Systeme : relance a la premiere connexion, en
+            # administrateur sous le compte cree (UserApps.ps1), sans les options "pour tous".
+            `$userApps = '$NovaDir\UserApps'
+            New-Item -ItemType Directory -Force -Path `$userApps | Out-Null
+            Copy-Item `$file `$userApps -Force
+            `$userArgs = (`$app.Arguments -replace '\s*/ALLUSERS', '' -replace '\s*-dir\s+"[^"]*"', '').Trim()
+            [pscustomobject]@{ Name = `$app.Name; File = (Split-Path `$file -Leaf); Arguments = `$userArgs } |
+                Export-Csv "`$userApps\UserApps.csv" -NoTypeInformation -Encoding UTF8 -Append
+            Write-Output "  `$(`$app.Name) : sera installe a la premiere connexion"
+        }
     }
     Remove-Item `$apps -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -734,6 +766,18 @@ function New-Autounattend([string] $Path, [string] $Arch, $Config) {
       </OOBE>
 "@ + "`n"
     }
+    $firstLogon = ''
+    if ($Config.Apps.Enabled) {
+        $firstLogon = @"
+      <FirstLogonCommands>
+        <SynchronousCommand wcm:action="add">
+          <Order>1</Order>
+          <CommandLine>powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $NovaDir\UserApps.ps1</CommandLine>
+          <Description>Nova-Os : applis par utilisateur</Description>
+        </SynchronousCommand>
+      </FirstLogonCommands>
+"@ + "`n"
+    }
     $themes = ''
     if ($Config.Theme.Enabled) {
         $themes = @"
@@ -756,7 +800,7 @@ $(New-RunSynchronous $spCommands)    </component>
 $computerName  </settings>
   <settings pass="oobeSystem">
     <component name="Microsoft-Windows-Shell-Setup" $component>
-$oobe$themes    </component>
+$firstLogon$oobe$themes    </component>
   </settings>
 </unattend>
 "@ | Set-Content $Path -Encoding UTF8
