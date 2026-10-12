@@ -86,6 +86,11 @@ function Remove-RegValue([string] $Key, [string] $Name) {
     $script:RegLines.Add("reg delete `"$Key`" /v `"$Name`" /f >nul 2>&1")
 }
 
+# Desactive une tache planifiee (sans erreur si elle n'existe pas dans cette version de Windows).
+function Disable-Task([string] $Task) {
+    $script:RegLines.Add("schtasks /Change /TN `"$Task`" /Disable >nul 2>&1")
+}
+
 function Set-SystemTweaks($Config) {
     if ($Config.BypassHardwareChecks) {
         Write-Host '  - Contournement TPM / Secure Boot / RAM / CPU (mises a jour futures)'
@@ -103,6 +108,38 @@ function Set-SystemTweaks($Config) {
         Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Services\dmwappushservice' 'Start' 4
         Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo" 'Enabled' 0
         Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Privacy" 'TailoredExperiencesWithDiagnosticDataEnabled' 0
+
+        # Pas de rapport d'erreurs, de programme d'amelioration, ni de demandes d'avis.
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection' 'DoNotShowFeedbackNotifications' 1
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection' 'LimitDiagnosticLogCollection' 1
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection' 'DisableOneSettingsDownloads' 1
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting' 'Disabled' 1
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\SQMClient\Windows' 'CEIPEnable' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat' 'AITEnable' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat' 'DisableInventory' 1
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System' 'EnableActivityFeed' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System' 'UploadUserActivities' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\TabletPC' 'PreventHandwritingDataSharing' 1
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\InputPersonalization' 'AllowInputPersonalization' 0
+        Set-Reg "$DefaultUser\Software\Microsoft\Siuf\Rules" 'NumberOfSIUFInPeriod' 0
+        Set-Reg "$DefaultUser\Software\Microsoft\Input\TIPC" 'Enabled' 0
+        Set-Reg "$DefaultUser\Software\Microsoft\InputPersonalization" 'RestrictImplicitTextCollection' 1
+        Set-Reg "$DefaultUser\Software\Microsoft\InputPersonalization" 'RestrictImplicitInkCollection' 1
+        Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'Start_TrackProgs' 0
+
+        # Taches planifiees qui envoient des donnees de diagnostic.
+        foreach ($task in '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser',
+                          '\Microsoft\Windows\Application Experience\ProgramDataUpdater',
+                          '\Microsoft\Windows\Application Experience\StartupAppTask',
+                          '\Microsoft\Windows\Customer Experience Improvement Program\Consolidator',
+                          '\Microsoft\Windows\Customer Experience Improvement Program\UsbCeip',
+                          '\Microsoft\Windows\Autochk\Proxy',
+                          '\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector',
+                          '\Microsoft\Windows\Feedback\Siuf\DmClient',
+                          '\Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload',
+                          '\Microsoft\Windows\Windows Error Reporting\QueueReporting') {
+            Disable-Task $task
+        }
     }
 
     if ($Config.DisableConsumerFeatures) {
