@@ -323,7 +323,7 @@ function Set-ThemeTweaks($Theme) {
     Set-Reg $personalize 'AppsUseLightTheme' 0
     Set-Reg $personalize 'SystemUsesLightTheme' 0
     Set-Reg $personalize 'EnableTransparency' 1
-    Set-Reg $personalize 'ColorPrevalence' 1            # accent sur la barre des taches et Demarrer
+    Set-Reg $personalize 'ColorPrevalence' 0            # Demarrer et barre des taches noirs (accent sur les details)
     Set-Reg "$DefaultUser\Software\Microsoft\Windows\DWM" 'AccentColor' $abgr
     Set-Reg "$DefaultUser\Software\Microsoft\Windows\DWM" 'ColorPrevalence' 1   # accent sur les barres de titre
     Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Accent" 'AccentColorMenu' $abgr
