@@ -136,6 +136,15 @@
         RoundedTaskbar = $true
     }
 
+    # --- Navigateur ---------------------------------------------------------
+    # Brave installe (pour tous les comptes), navigateur par defaut et epingle dans la barre des
+    # taches. Edge est desinstalle et bloque ; WebView2, dont certaines applis ont besoin, reste.
+    # Internet Explorer est retire avec RemoveCapabilities (Browser.InternetExplorer).
+    Browser = @{
+        Brave      = $true
+        RemoveEdge = $true
+    }
+
     # --- Applications ------------------------------------------------------
     # Telechargees avec winget pendant la construction de l'ISO, puis installees en silence
     # pendant l'installation de Windows (pas besoin d'Internet sur le PC installe).
@@ -147,6 +156,11 @@
             'MoritzBunkus.MKVToolNix'           # MKVToolNix
             'XMediaRecode.XMediaRecode'         # XMedia Recode
         )
+        # Fichiers de reponses Inno Setup (/LOADINF) pour installer avec des choix precis.
+        # K-Lite en mode complet : lance son installeur avec /SAVEINF="klcp.ini", choisis le profil complet et depose le fichier ici.
+        LoadInf = @{
+            'CodecGuide.K-LiteCodecPack.Mega' = 'D:\NovaOS\installers\klcp.ini'
+        }
         # Tes propres installeurs (.exe Inno Setup / NSIS, ou .msi) : depose-les dans ce dossier.
         Folder  = 'D:\NovaOS\installers'
     }

@@ -168,6 +168,17 @@ function Set-SystemTweaks($Config) {
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' 'AllowRecallEnablement' 0
     }
 
+    if ($Config.Browser.Brave) {
+        Write-Host '  - Brave navigateur par defaut'
+        Set-RegString 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System' 'DefaultAssociationsConfiguration' "$NovaDir\DefaultApps.xml"
+    }
+    if ($Config.Browser.RemoveEdge) {
+        Write-Host '  - Edge supprime et bloque (WebView2 garde pour les applis qui en ont besoin)'
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate' 'Install{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}' 0
+        Set-Reg 'HKLM\SOFTWARE\Microsoft\EdgeUpdate' 'DoNotUpdateToEdgeWithChromium' 1
+        Set-Reg 'HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdateDev' 'AllowUninstall' 1
+    }
+
     if ($Config.RemoveOneDrive) {
         Write-Host '  - OneDrive non installe a la premiere connexion'
         # C'est cette entree du profil par defaut qui installe OneDrive pour chaque nouveau compte.
@@ -502,7 +513,11 @@ function Add-Apps([string] $Dir, $Apps) {
     foreach ($id in $Apps.Winget) {
         $target = Join-Path $appsDir $id
         New-Item -ItemType Directory -Force -Path $target | Out-Null
-        & winget download --id $id -e --source winget -d $target --accept-package-agreements --accept-source-agreements | Out-Null
+        # Version "pour tous les comptes" si elle existe, sinon celle par defaut.
+        & winget download --id $id -e --source winget --scope machine -d $target --accept-package-agreements --accept-source-agreements | Out-Null
+        if (-not (Get-ChildItem $target -File | Where-Object Extension -in $script:InstallerTypes)) {
+            & winget download --id $id -e --source winget -d $target --accept-package-agreements --accept-source-agreements | Out-Null
+        }
         # Dependances fournies par winget (Visual C++...) : installees avant l'appli.
         foreach ($dep in Get-ChildItem $target -Recurse -File | Where-Object { $_.DirectoryName -ne $target -and $_.Extension -in $script:InstallerTypes }) {
             $depArgs = if ($dep.Name -like '*vc_redist*' -or $dep.Name -like '*Visual C++*') { '/install /quiet /norestart' } else { Get-SilentArguments $dep.FullName $null }
@@ -524,6 +539,15 @@ function Add-Apps([string] $Dir, $Apps) {
         if ($arguments -match '(^|\s)-q(\s|$)' -and $arguments -notmatch '-dir') {
             $arguments += " -dir `"C:\Program Files\$($id.Split('.')[-1])`""
         }
+        # Fichier de reponses Inno Setup (/LOADINF) : choix de l'installeur, ex. K-Lite en mode complet.
+        $inf = if ($Apps.LoadInf) { $Apps.LoadInf[$id] }
+        if ($inf -and (Test-Path $inf)) {
+            Copy-Item $inf (Join-Path $target 'setup.inf') -Force
+            $arguments += " /LOADINF=`"$NovaDir\Apps\$id\setup.inf`""
+        }
+        elseif ($inf) { Write-Warning "$id : $inf introuvable, installation avec les choix par defaut." }
+        # Brave : installation pour tous les comptes (sinon il irait dans le profil Systeme).
+        if ($id -eq 'Brave.Brave' -and $arguments -notmatch 'system-level') { $arguments = "--install --silent --system-level" }
         Get-ChildItem $target -Filter *.yaml | Remove-Item -Force
         $list += [pscustomobject]@{ Name = $id; File = "$id\$($file.Name)"; Arguments = $arguments }
         Write-Host "  - $id ($($file.Name))"
@@ -566,7 +590,8 @@ function New-Payload([string] $Dir, $Config) {
     $pins = @()
     ConvertTo-Json @{ pinnedList = $pins } -Depth 3 | Set-Content (Join-Path $Dir 'LayoutModification.json') -Encoding UTF8
 
-    # Barre des taches : Explorateur, Edge et Store, sans l'epingle Outlook ajoutee par Windows.
+    # Barre des taches : Explorateur, navigateur et Store, sans l'epingle Outlook ajoutee par Windows.
+    $browserLink = if ($Config.Browser.Brave) { 'Brave.lnk' } else { 'Microsoft Edge.lnk' }
     @'
 <?xml version="1.0" encoding="utf-8"?>
 <LayoutModificationTemplate xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification" xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout" xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout" xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout" Version="1">
@@ -574,13 +599,21 @@ function New-Payload([string] $Dir, $Config) {
     <defaultlayout:TaskbarLayout>
       <taskbar:TaskbarPinList>
         <taskbar:DesktopApp DesktopApplicationLinkPath="%APPDATA%\Microsoft\Windows\Start Menu\Programs\File Explorer.lnk" />
-        <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" />
+        <taskbar:DesktopApp DesktopApplicationLinkPath="%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\BROWSER_LINK" />
         <taskbar:UWA AppUserModelID="Microsoft.WindowsStore_8wekyb3d8bbwe!App" />
       </taskbar:TaskbarPinList>
     </defaultlayout:TaskbarLayout>
   </CustomTaskbarLayoutCollection>
 </LayoutModificationTemplate>
-'@ | Set-Content (Join-Path $Dir 'LayoutModification.xml') -Encoding UTF8
+'@.Replace('BROWSER_LINK', $browserLink) | Set-Content (Join-Path $Dir 'LayoutModification.xml') -Encoding UTF8
+
+    if ($Config.Browser.Brave) {
+        # Brave navigateur par defaut des nouveaux comptes (strategie "associations par defaut").
+        $associations = '.htm', '.html', '.shtml', '.xht', '.xhtml', '.pdf', '.svg', '.webp', 'http', 'https', 'ftp' |
+            ForEach-Object { "  <Association Identifier=`"$_`" ProgId=`"BraveHTML`" ApplicationName=`"Brave`" />" }
+        (@('<?xml version="1.0" encoding="UTF-8"?>', '<DefaultAssociations>') + $associations + '</DefaultAssociations>') |
+            Set-Content (Join-Path $Dir 'DefaultApps.xml') -Encoding UTF8
+    }
 
     # Cleanup.ps1 : a chaque connexion, retire les applis de la liste deja installees pour le compte
     # (celles que le Store installe tout seul apres l'installation, comme WhatsApp ou Xbox).
@@ -633,6 +666,7 @@ if (`$installed -and -not (Get-Process RoundedTB -ErrorAction SilentlyContinue))
 }
 "@ | Add-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
     }
+    $removeEdge = if ($Config.Browser.RemoveEdge) { '$true' } else { '$false' }
     # UserApps.ps1 : premiere connexion (FirstLogonCommands, en administrateur sous le compte cree) :
     # installe les applis "par utilisateur" que le compte Systeme n'a pas pu installer.
     @"
@@ -646,6 +680,23 @@ if (Test-Path "`$userApps\UserApps.csv") {
         if (-not `$process.WaitForExit(1200000)) { `$process | Stop-Process -Force }
         Add-Content '$NovaDir\UserApps.log' "`$(Get-Date -Format s) `$(`$app.Name) : code `$(`$process.ExitCode)"
     }
+}
+
+if ($removeEdge) {
+    # A la premiere connexion : la region (France = Europe) est choisie, la desinstallation est autorisee.
+    Add-Content '$NovaDir\UserApps.log' "`$(Get-Date -Format s) suppression de Microsoft Edge"
+    `$setup = Get-ChildItem "`${env:ProgramFiles(x86)}\Microsoft\Edge\Application\*\Installer\setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (`$setup) {
+        # Le desinstalleur refuse si l'ancienne appli Edge integree semble absente : on lui en montre une.
+        `$stub = "`$env:SystemRoot\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
+        New-Item -ItemType Directory -Force -Path `$stub | Out-Null
+        if (-not (Test-Path "`$stub\MicrosoftEdge.exe")) { New-Item -ItemType File -Path "`$stub\MicrosoftEdge.exe" | Out-Null; `$created = `$true }
+        `$process = Start-Process `$setup.FullName '--uninstall --system-level --force-uninstall --delete-profile' -PassThru -Wait
+        Add-Content '$NovaDir\UserApps.log' "`$(Get-Date -Format s) Edge : code `$(`$process.ExitCode)"
+        if (`$created) { Remove-Item "`$stub\MicrosoftEdge.exe" -Force -ErrorAction SilentlyContinue }
+    }
+    
+    Remove-Item "`$env:PUBLIC\Desktop\Microsoft Edge.lnk", "`$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
 }
 "@ | Set-Content (Join-Path $Dir 'UserApps.ps1') -Encoding UTF8
 
@@ -873,7 +924,7 @@ function New-Autounattend([string] $Path, [string] $Arch, $Config) {
 "@ + "`n"
     }
     $firstLogon = ''
-    if ($Config.Apps.Enabled) {
+    if ($Config.Apps.Enabled -or $Config.Browser.RemoveEdge) {
         $firstLogon = @"
       <FirstLogonCommands>
         <SynchronousCommand wcm:action="add">
@@ -1000,6 +1051,11 @@ try {
         if (-not $config.Apps) { $config.Apps = @{ Enabled = $true; Winget = @() } }
         $config.Apps.Enabled = $true
         $config.Apps.Winget = @($config.Apps.Winget) + 'TorchGM.RoundedTB'
+    }
+    if ($config.Browser.Brave) {
+        if (-not $config.Apps) { $config.Apps = @{ Enabled = $true; Winget = @() } }
+        $config.Apps.Enabled = $true
+        $config.Apps.Winget = @('Brave.Brave') + @($config.Apps.Winget)
     }
     if ($config.Apps.Enabled) {
         Write-Step 'Telechargement des applications Nova-Os'
