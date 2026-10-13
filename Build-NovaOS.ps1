@@ -137,6 +137,10 @@ function Set-SystemTweaks($Config) {
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System' 'AllowClipboardHistory' 1
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System' 'AllowCrossDeviceClipboard' 0
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection' 'AllowDeviceNameInTelemetry' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search' 'AllowCloudSearch' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent' 'DisableTailoredExperiencesWithDiagnosticData' 1
+        # Telemetrie NVIDIA, prete pour quand le pilote sera installe.
+        Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Services\NvTelemetryContainer' 'Start' 4
 
         # Taches planifiees qui envoient des donnees de diagnostic.
         foreach ($task in '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser',
