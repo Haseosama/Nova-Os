@@ -128,6 +128,16 @@ function Set-SystemTweaks($Config) {
         Set-Reg "$DefaultUser\Software\Microsoft\InputPersonalization" 'RestrictImplicitInkCollection' 1
         Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'Start_TrackProgs' 0
 
+        # Journal de diagnostic au demarrage, saisie vocale en ligne, cartes, recherche de l'appareil.
+        Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\WMI\Autologger\AutoLogger-Diagtrack-Listener' 'Start' 0
+        Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\WMI\Autologger\SQMLogger' 'Start' 0
+        Set-Reg "$DefaultUser\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy" 'HasAccepted' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Maps' 'AutoDownloadAndUpdateMapData' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\FindMyDevice' 'AllowFindMyDevice' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System' 'AllowClipboardHistory' 1
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System' 'AllowCrossDeviceClipboard' 0
+        Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection' 'AllowDeviceNameInTelemetry' 0
+
         # Taches planifiees qui envoient des donnees de diagnostic.
         foreach ($task in '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser',
                           '\Microsoft\Windows\Application Experience\ProgramDataUpdater',
@@ -138,7 +148,11 @@ function Set-SystemTweaks($Config) {
                           '\Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector',
                           '\Microsoft\Windows\Feedback\Siuf\DmClient',
                           '\Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload',
-                          '\Microsoft\Windows\Windows Error Reporting\QueueReporting') {
+                          '\Microsoft\Windows\Windows Error Reporting\QueueReporting',
+                          '\Microsoft\Windows\Device Information\Device',
+                          '\Microsoft\Windows\Device Information\Device User',
+                          '\Microsoft\Windows\Maps\MapsUpdateTask',
+                          '\Microsoft\Windows\Maps\MapsToastTask') {
             Disable-Task $task
         }
     }
