@@ -560,6 +560,7 @@ function Add-Apps([string] $Dir, $Apps) {
         }
         # Fichier de reponses Inno Setup (/LOADINF) : choix de l'installeur, ex. K-Lite en mode complet.
         $inf = if ($Apps.LoadInf) { $Apps.LoadInf[$id] }
+        if ($inf -and -not [IO.Path]::IsPathRooted($inf)) { $inf = Join-Path $PSScriptRoot $inf }
         # Nom different (klcp.ini...) : premier fichier .ini du meme dossier qui commence pareil.
         if ($inf -and -not (Test-Path $inf) -and (Test-Path (Split-Path $inf))) {
             $prefix = (Split-Path $inf -Leaf).Split('_.')[0]
