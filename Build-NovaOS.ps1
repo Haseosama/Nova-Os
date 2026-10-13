@@ -543,7 +543,7 @@ function Add-Apps([string] $Dir, $Apps) {
             if ($null -eq $depArgs) { Write-Warning "$($dep.Name) : type d'installeur inconnu, ignore."; continue }
             if ($list.File -notcontains $dep.Name -and -not ($list | Where-Object Name -eq $dep.Name)) {
                 Move-Item $dep.FullName (Join-Path $appsDir $dep.Name) -Force
-                $list += [pscustomobject]@{ Name = $dep.Name; File = $dep.Name; Arguments = $depArgs }
+                $list += [pscustomobject]@{ Name = $dep.Name; File = $dep.Name; Arguments = $depArgs; Logon = '' }
                 Write-Host "  - $($dep.Name) (dependance de $id)"
             }
         }
@@ -575,7 +575,10 @@ function Add-Apps([string] $Dir, $Apps) {
         # Brave : installation pour tous les comptes (sinon il irait dans le profil Systeme).
         if ($id -eq 'Brave.Brave' -and $arguments -notmatch 'system-level') { $arguments = "--install --silent --system-level" }
         Get-ChildItem $target -Filter *.yaml | Remove-Item -Force
-        $list += [pscustomobject]@{ Name = $id; File = "$id\$($file.Name)"; Arguments = $arguments }
+        # Installeurs qui echouent sous le compte Systeme pendant l'installation (Brave, base sur
+        # Omaha comme Chrome) : installes a la premiere connexion, en administrateur.
+        $logon = if ($id -in @($Apps.AtFirstLogon) + 'Brave.Brave') { '1' } else { '' }
+        $list += [pscustomobject]@{ Name = $id; File = "$id\$($file.Name)"; Arguments = $arguments; Logon = $logon }
         Write-Host "  - $id ($($file.Name))"
     }
     if ($Apps.Folder -and (Test-Path $Apps.Folder)) {
@@ -583,7 +586,7 @@ function Add-Apps([string] $Dir, $Apps) {
             $arguments = Get-SilentArguments $file.FullName $null
             if ($null -eq $arguments) { Write-Warning "$($file.Name) : type d'installeur inconnu, ignore."; continue }
             Copy-Item $file.FullName (Join-Path $appsDir $file.Name) -Force
-            $list += [pscustomobject]@{ Name = $file.BaseName; File = $file.Name; Arguments = $arguments }
+            $list += [pscustomobject]@{ Name = $file.BaseName; File = $file.Name; Arguments = $arguments; Logon = '' }
             Write-Host "  - $($file.Name)"
         }
     }
@@ -693,6 +696,7 @@ if (`$installed -and -not (Get-Process RoundedTB -ErrorAction SilentlyContinue))
 "@ | Add-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
     }
     $removeEdge = if ($Config.Browser.RemoveEdge) { '$true' } else { '$false' }
+    $needBrave = if ($Config.Browser.Brave) { '$true' } else { '$false' }
     # UserApps.ps1 : premiere connexion (FirstLogonCommands, en administrateur sous le compte cree) :
     # installe les applis "par utilisateur" que le compte Systeme n'a pas pu installer.
     @"
@@ -708,10 +712,14 @@ if (Test-Path "`$userApps\UserApps.csv") {
     }
 }
 
+`$needBrave = $needBrave
 if ($removeEdge) {
     # A la premiere connexion : la region (France = Europe) est choisie, la desinstallation est autorisee.
     Add-Content '$NovaDir\UserApps.log' "`$(Get-Date -Format s) suppression de Microsoft Edge"
     `$setup = Get-ChildItem "`${env:ProgramFiles(x86)}\Microsoft\Edge\Application\*\Installer\setup.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+    # Jamais sans navigateur : Edge reste si Brave n'a pas pu etre installe.
+    `$brave = Test-Path "`$env:ProgramFiles\BraveSoftware\Brave-Browser\Application\brave.exe"
+    if (`$needBrave -and -not `$brave) { Add-Content '$NovaDir\UserApps.log' "`$(Get-Date -Format s) Brave absent : Edge garde"; `$setup = `$null }
     if (`$setup) {
         # Le desinstalleur refuse si l'ancienne appli Edge integree semble absente : on lui en montre une.
         `$stub = "`$env:SystemRoot\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
@@ -792,6 +800,15 @@ if (Test-Path "`$apps\Apps.csv") {
     Write-Output '== Applications Nova-Os'
     foreach (`$app in Import-Csv "`$apps\Apps.csv") {
         `$file = Join-Path `$apps `$app.File
+        if (`$app.Logon) {
+            `$userApps = '$NovaDir\UserApps'
+            New-Item -ItemType Directory -Force -Path `$userApps | Out-Null
+            Copy-Item `$file `$userApps -Force
+            [pscustomobject]@{ Name = `$app.Name; File = (Split-Path `$file -Leaf); Arguments = `$app.Arguments } |
+                Export-Csv "`$userApps\UserApps.csv" -NoTypeInformation -Encoding UTF8 -Append
+            Write-Output "  `$(`$app.Name) : installe a la premiere connexion"
+            continue
+        }
         if (`$app.Arguments -eq 'APPX') {
             # Paquet d'appli : provisionne pour tous les comptes.
             try { Add-AppxProvisionedPackage -Online -PackagePath `$file -SkipLicense -ErrorAction Stop | Out-Null; Write-Output "  `$(`$app.Name) : provisionne" }
@@ -930,7 +947,7 @@ function New-Autounattend([string] $Path, [string] $Arch, $Config) {
     if ($Config.AllowLocalAccount) {
         $spCommands += 'reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\OOBE /v BypassNRO /t REG_DWORD /d 1 /f'
     }
-    $spCommands += "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $NovaDir\Specialize.ps1"
+    $spCommands += "powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File $NovaDir\Specialize.ps1"
     $computerName = ''
     if ($Config.Branding.Enabled -and $Config.Branding.ComputerName) {
         $computerName = @"
