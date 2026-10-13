@@ -572,8 +572,8 @@ function Add-Apps([string] $Dir, $Apps) {
             $arguments += " /LOADINF=`"$NovaDir\Apps\$id\setup.inf`""
         }
         elseif ($inf) { Write-Warning "$id : $inf introuvable, installation avec les choix par defaut." }
-        # Brave : installation pour tous les comptes (sinon il irait dans le profil Systeme).
-        if ($id -eq 'Brave.Brave' -and $arguments -notmatch 'system-level') { $arguments = "--install --silent --system-level" }
+        # Brave (installeur Omaha, version "machine") : seules options acceptees, sinon code 0x80040C01.
+        if ($id -eq 'Brave.Brave') { $arguments = '/silent /install' }
         Get-ChildItem $target -Filter *.yaml | Remove-Item -Force
         # Installeurs qui echouent sous le compte Systeme pendant l'installation (Brave, base sur
         # Omaha comme Chrome) : installes a la premiere connexion, en administrateur.
