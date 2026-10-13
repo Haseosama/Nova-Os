@@ -1138,7 +1138,12 @@ try {
     $bios = Join-Path $isoDir 'boot\etfsboot.com'
     $uefi = Join-Path $isoDir 'efi\microsoft\boot\efisys.bin'
     $bootData = if (Test-Path $bios) { "2#p0,e,b$bios#pEF,e,b$uefi" } else { "1#pEF,e,b$uefi" }
-    & $oscdimg -m -o -u2 -udfver102 "-bootdata:$bootData" -lNOVA_OS $isoDir $OutputIso
+    # oscdimg ecrit sa progression sur stderr : sans ce Continue, PowerShell l'arrete des la
+    # premiere ligne quand la sortie est redirigee vers un journal.
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    & $oscdimg -m -o -u2 -udfver102 "-bootdata:$bootData" -lNOVA_OS $isoDir $OutputIso 2>&1 | ForEach-Object { "$_" }
+    $ErrorActionPreference = $previousPreference
     if ($LASTEXITCODE -ne 0) { throw "oscdimg a echoue (code $LASTEXITCODE)." }
 
     Write-Host "`nTermine : $OutputIso" -ForegroundColor Green
