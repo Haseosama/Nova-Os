@@ -64,7 +64,25 @@
         '4DF9E0F8.Netflix'
         'Microsoft.MicrosoftPCManager'
         'SpotifyAB.SpotifyMusic'
+        # Ajouts : Courrier et Calendrier, Sway, publicites des applis, page d'accueil du menu Demarrer.
+        'microsoft.windowscommunicationsapps'
+        'Microsoft.Office.Sway'
+        'Microsoft.Advertising.Xaml'
+        'Microsoft.StartExperiencesApp'
+        'Microsoft.WindowsTerminal.Preview'
     )
+
+    # Composants Windows desactives pendant l'installation : Recall, Dossiers de travail,
+    # imprimante XPS, ancien PowerShell 2.0 (faille de securite connue).
+    RemoveFeatures = @('Recall', 'WorkFolders-Client', 'Printing-XPSServices-Features',
+                       'MicrosoftWindowsPowerShellV2Root', 'MicrosoftWindowsPowerShellV2')
+
+    # Fonctionnalites facultatives supprimees : Enregistreur d'actions, reconnaissance d'ecriture
+    # mathematique, ancien Lecteur Windows Media, WordPad, Internet Explorer, Assistance rapide,
+    # reconnaissance faciale Windows Hello (retire cette ligne si ton PC a une camera Hello).
+    RemoveCapabilities = @('App.StepsRecorder', 'MathRecognizer', 'Media.WindowsMediaPlayer',
+                           'Microsoft.Windows.WordPad', 'Browser.InternetExplorer',
+                           'App.Support.QuickAssist', 'Hello.Face')
     # Conserves volontairement : Store, Calculatrice, Photos, Bloc-notes, Terminal, Paint, Capture d'ecran,
     # Camera, et la connexion Xbox (XboxIdentityProvider, Xbox.TCUI) dont certains jeux PC ont besoin.
 
@@ -150,6 +168,11 @@
     # Mode Jeu actif, enregistrement Game DVR coupe, planification GPU materielle,
     # priorite CPU/GPU aux jeux, acceleration de la souris desactivee.
     GamingTweaks           = $true
+
+    # Performances : applis en arriere-plan coupees, Edge ne reste plus en memoire, pas de partage
+    # des mises a jour en P2P, services inutiles coupes (fax, demo magasin, cartes, registre a
+    # distance), demarrage sans delai, plus d'astuces ni de suggestions.
+    PerformanceTweaks      = $true
 
     # Active le mode d'alimentation "Performances optimales" au premier demarrage.
     # Sur un PC portable, cela reduit l'autonomie.

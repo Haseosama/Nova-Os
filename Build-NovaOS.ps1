@@ -360,6 +360,34 @@ function Set-BrandingTweaks($Branding) {
 # Optimisations jeux
 # ---------------------------------------------------------------------------
 
+function Set-PerformanceTweaks {
+    # Applis en arriere-plan coupees (elles s'ouvrent normalement quand on les lance).
+    Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy' 'LetAppsRunInBackground' 2
+    # Pas de partage des mises a jour avec d'autres PC (Windows Update reste actif).
+    Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization' 'DODownloadMode' 0
+    # Edge ne reste plus en memoire une fois ferme, ni pre-lance au demarrage.
+    Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Edge' 'StartupBoostEnabled' 0
+    Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Edge' 'BackgroundModeEnabled' 0
+    # Pas de bridage des processus en arriere-plan (Power Throttling).
+    Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling' 'PowerThrottlingOff' 1
+    # NTFS n'ecrit plus la date du dernier acces a chaque lecture de fichier.
+    Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\FileSystem' 'NtfsDisableLastAccessUpdate' 2147483649
+    # Services inutiles sur un PC personnel : fax, demo en magasin, cartes hors ligne, registre a distance.
+    foreach ($service in 'Fax', 'RetailDemo', 'MapsBroker', 'RemoteRegistry') {
+        Set-Reg "HKLM\SYSTEM\CurrentControlSet\Services\$service" 'Start' 4
+    }
+    # Session : applis de demarrage lancees sans delai, menus instantanes.
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize" 'StartupDelayInMSec' 0
+    Set-RegString "$DefaultUser\Control Panel\Desktop" 'MenuShowDelay' '0'
+    # Plus d'astuces, de suggestions ni d'ecran "Terminons la configuration".
+    $cdm = "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager"
+    foreach ($name in 'SoftLandingEnabled', 'SubscribedContent-310093Enabled', 'SubscribedContent-353694Enabled',
+                      'SubscribedContent-353696Enabled', 'SubscribedContent-338393Enabled') {
+        Set-Reg $cdm $name 0
+    }
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement" 'ScoobeSystemSettingEnabled' 0
+}
+
 function Set-GamingTweaks {
     # Planification GPU acceleree par le materiel (necessite un pilote compatible).
     Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers' 'HwSchMode' 2
@@ -591,6 +619,8 @@ if (Test-Path "`$userApps\UserApps.csv") {
 
     # Specialize.ps1 : lance par autounattend.xml pendant l'installation, avant la creation du compte.
     $power = if ($Config.UltimatePerformance) { '$true' } else { '$false' }
+    $features = ($Config.RemoveFeatures | ForEach-Object { "'$_'" }) -join ', '
+    $capabilities = ($Config.RemoveCapabilities | ForEach-Object { "'$_'" }) -join ', '
     @"
 # Nova-Os : applique pendant l'installation de Windows (passe specialize). Journal : Specialize.log
 `$ErrorActionPreference = 'Continue'
@@ -683,6 +713,26 @@ if (Test-Path "`$apps\Apps.csv") {
         }
     }
     Remove-Item `$apps -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+`$features = @($features)
+`$capabilities = @($capabilities)
+if (`$features -or `$capabilities) {
+    Write-Output '== Composants Windows inutiles'
+    foreach (`$name in `$features) {
+        `$feature = Get-WindowsOptionalFeature -Online -FeatureName `$name -ErrorAction SilentlyContinue
+        if (`$feature -and `$feature.State -eq 'Enabled') {
+            try { Disable-WindowsOptionalFeature -Online -FeatureName `$name -NoRestart -ErrorAction Stop | Out-Null; Write-Output "  desactive : `$name" }
+            catch { Write-Output "  ECHEC `$name : `$(`$_.Exception.Message)" }
+        }
+    }
+    `$installed = Get-WindowsCapability -Online -ErrorAction SilentlyContinue | Where-Object State -eq 'Installed'
+    foreach (`$name in `$capabilities) {
+        `$installed | Where-Object Name -like "`$name~*" | ForEach-Object {
+            try { Remove-WindowsCapability -Online -Name `$_.Name -ErrorAction Stop | Out-Null; Write-Output "  supprime : `$(`$_.Name)" }
+            catch { Write-Output "  ECHEC `$(`$_.Name) : `$(`$_.Exception.Message)" }
+        }
+    }
 }
 
 if ($power) {
@@ -878,6 +928,10 @@ try {
     if ($config.Branding.Enabled) {
         Write-Host '  - Identite Nova-Os (logo, fabricant, nom du PC, images de compte)'
         Set-BrandingTweaks $config.Branding
+    }
+    if ($config.PerformanceTweaks) {
+        Write-Host '  - Performances (arriere-plan, services inutiles, Edge, demarrage)'
+        Set-PerformanceTweaks
     }
     if ($config.GamingTweaks) {
         Write-Host '  - Optimisations jeux'
