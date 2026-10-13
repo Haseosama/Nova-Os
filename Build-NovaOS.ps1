@@ -141,6 +141,7 @@ function Set-SystemTweaks($Config) {
         Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent' 'DisableTailoredExperiencesWithDiagnosticData' 1
         # Telemetrie NVIDIA, prete pour quand le pilote sera installe.
         Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Services\NvTelemetryContainer' 'Start' 4
+        Set-Reg 'HKLM\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client' 'OptInOrOutPreference' 0
 
         # Taches planifiees qui envoient des donnees de diagnostic.
         foreach ($task in '\Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser',
