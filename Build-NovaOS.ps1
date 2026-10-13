@@ -386,6 +386,28 @@ function Set-PerformanceTweaks {
         Set-Reg $cdm $name 0
     }
     Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement" 'ScoobeSystemSettingEnabled' 0
+
+    # Recherche locale seulement : plus de resultats Bing ni de "points forts" dans Demarrer.
+    Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search' 'DisableWebSearch' 1
+    Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search' 'ConnectedSearchUseWeb' 0
+    Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search' 'EnableDynamicContentInWSB' 0
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Search" 'BingSearchEnabled' 0
+    # Plus de publicites OneDrive/Office dans l'Explorateur.
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'ShowSyncProviderNotifications' 0
+    # NTFS ne cree plus les noms courts 8.3 (heritage MS-DOS) : creation de fichiers plus rapide.
+    Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\FileSystem' 'NtfsDisable8dot3NameCreation' 1
+    # Autres services inutiles : suivi des liens, controle parental, collecteur de diagnostic.
+    foreach ($service in 'TrkWks', 'WpcMonSvc', 'diagnosticshub.standardcollector.service') {
+        Set-Reg "HKLM\SYSTEM\CurrentControlSet\Services\$service" 'Start' 4
+    }
+    # Assistance a distance coupee.
+    Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance' 'fAllowToGetHelp' 0
+    # Pas de telemetrie PowerShell ni .NET.
+    Set-RegString 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' 'POWERSHELL_TELEMETRY_OPTOUT' '1'
+    Set-RegString 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' 'DOTNET_CLI_TELEMETRY_OPTOUT' '1'
+    # Fenetres sans animation d'agrandissement/reduction (la transparence reste) et clavier plus reactif.
+    Set-RegString "$DefaultUser\Control Panel\Desktop\WindowMetrics" 'MinAnimate' '0'
+    Set-RegString "$DefaultUser\Control Panel\Keyboard" 'KeyboardDelay' '0'
 }
 
 function Set-GamingTweaks {
@@ -400,6 +422,11 @@ function Set-GamingTweaks {
     Set-Reg "$mm\Tasks\Games" 'Priority' 6
     Set-RegString "$mm\Tasks\Games" 'Scheduling Category' 'High'
     Set-RegString "$mm\Tasks\Games" 'SFIO Priority' 'High'
+
+    # Priorite au programme au premier plan (le jeu) dans le partage du processeur.
+    Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl' 'Win32PrioritySeparation' 38
+    # Minuterie systeme precise pour les jeux qui la demandent, meme quand une autre appli la change.
+    Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel' 'GlobalTimerResolutionRequests' 1
 
     # Pas d'enregistrement video en arriere-plan (Game DVR).
     Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR' 'AllowGameDVR' 0
