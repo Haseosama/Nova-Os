@@ -560,6 +560,12 @@ function Add-Apps([string] $Dir, $Apps) {
         }
         # Fichier de reponses Inno Setup (/LOADINF) : choix de l'installeur, ex. K-Lite en mode complet.
         $inf = if ($Apps.LoadInf) { $Apps.LoadInf[$id] }
+        # Nom different (klcp.ini...) : premier fichier .ini du meme dossier qui commence pareil.
+        if ($inf -and -not (Test-Path $inf) -and (Test-Path (Split-Path $inf))) {
+            $prefix = (Split-Path $inf -Leaf).Split('_.')[0]
+            $found = Get-ChildItem (Split-Path $inf) -Filter "$prefix*.ini" | Select-Object -First 1
+            if ($found) { $inf = $found.FullName }
+        }
         if ($inf -and (Test-Path $inf)) {
             Copy-Item $inf (Join-Path $target 'setup.inf') -Force
             $arguments += " /LOADINF=`"$NovaDir\Apps\$id\setup.inf`""
