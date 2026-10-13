@@ -174,6 +174,14 @@
     # distance), demarrage sans delai, plus d'astuces ni de suggestions.
     PerformanceTweaks      = $true
 
+    # Coupe la veille prolongee et le demarrage rapide : libere la taille de la RAM sur C:
+    # (hiberfil.sys). A mettre a $false sur un PC portable qui s'en sert.
+    DisableHibernation     = $true
+
+    # Nettoie le magasin de composants (WinSxS) a la fin de l'installation : 1 a 2 Go gagnes,
+    # mais l'installation de Windows dure 5 a 10 minutes de plus.
+    CleanupComponents      = $true
+
     # Active le mode d'alimentation "Performances optimales" au premier demarrage.
     # Sur un PC portable, cela reduit l'autonomie.
     UltimatePerformance    = $true

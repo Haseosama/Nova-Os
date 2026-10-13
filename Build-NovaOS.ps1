@@ -661,6 +661,8 @@ if (Test-Path "`$userApps\UserApps.csv") {
 
     # Specialize.ps1 : lance par autounattend.xml pendant l'installation, avant la creation du compte.
     $power = if ($Config.UltimatePerformance) { '$true' } else { '$false' }
+    $hibernate = if ($Config.DisableHibernation) { '$true' } else { '$false' }
+    $cleanup = if ($Config.CleanupComponents) { '$true' } else { '$false' }
     $features = ($Config.RemoveFeatures | ForEach-Object { "'$_'" }) -join ', '
     $capabilities = ($Config.RemoveCapabilities | ForEach-Object { "'$_'" }) -join ', '
     @"
@@ -783,6 +785,18 @@ if ($power) {
     powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 4e0a7a8c-6f1b-4d4e-9c6a-6e6f76616f73 | Out-Null
     powercfg -setactive 4e0a7a8c-6f1b-4d4e-9c6a-6e6f76616f73
     if (`$LASTEXITCODE -ne 0) { powercfg -setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c }
+    Write-Output "  code `$LASTEXITCODE"
+}
+
+if ($hibernate) {
+    Write-Output '== Veille prolongee et demarrage rapide desactives (hiberfil.sys supprime)'
+    powercfg /hibernate off
+    Write-Output "  code `$LASTEXITCODE"
+}
+
+if ($cleanup) {
+    Write-Output '== Nettoyage du magasin de composants (WinSxS)'
+    Dism.exe /Online /Cleanup-Image /StartComponentCleanup /ResetBase /Quiet
     Write-Output "  code `$LASTEXITCODE"
 }
 
