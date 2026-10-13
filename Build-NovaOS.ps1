@@ -408,6 +408,13 @@ function Set-PerformanceTweaks {
     # Fenetres sans animation d'agrandissement/reduction (la transparence reste) et clavier plus reactif.
     Set-RegString "$DefaultUser\Control Panel\Desktop\WindowMetrics" 'MinAnimate' '0'
     Set-RegString "$DefaultUser\Control Panel\Keyboard" 'KeyboardDelay' '0'
+    # Jeux en fenetre / plein ecran fenetre : moins de latence (optimisations de Windows 11).
+    Set-RegString "$DefaultUser\Software\Microsoft\DirectX\UserGpuPreferences" 'DirectXUserGlobalSettings' 'SwapEffectUpgradeEnable=1;'
+    # Explorateur : extensions de fichiers visibles, ouverture sur "Ce PC".
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'HideFileExt' 0
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'LaunchTo' 1
+    # Edge : pas d'ecran de bienvenue ni d'assistant au premier lancement.
+    Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Edge' 'HideFirstRunExperience' 1
 }
 
 function Set-GamingTweaks {
@@ -602,6 +609,14 @@ if ((Test-Path `$wallpaper) -and -not (Get-ItemProperty `$done -Name ThemeApplie
     New-Item `$done -Force | Out-Null
     Set-ItemProperty `$done -Name ThemeApplied -Value 1
     Add-Content `$log "`$(Get-Date -Format s) fond d'ecran Nova-Os applique"
+}
+
+# Menu clic droit classique (sans "Afficher plus d'options"), une fois par compte.
+`$classic = 'HKCU:\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32'
+if (-not (Test-Path `$classic)) {
+    New-Item `$classic -Force | Set-ItemProperty -Name '(default)' -Value ''
+    Stop-Process -Name explorer -Force -ErrorAction SilentlyContinue
+    Add-Content `$log "`$(Get-Date -Format s) menu clic droit classique"
 }
 
 "@ | Set-Content (Join-Path $Dir 'Cleanup.ps1') -Encoding UTF8
