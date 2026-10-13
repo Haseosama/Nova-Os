@@ -210,6 +210,11 @@ function Set-SystemTweaks($Config) {
         Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity' 'Enabled' 0
     }
 
+    if ($Config.DisableSearchIndexing) {
+        Write-Host '  - Indexation de recherche desactivee'
+        Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Services\WSearch' 'Start' 4
+    }
+
     if ($Config.DisableReservedStorage) {
         Write-Host '  - Stockage reserve desactive'
         Set-Reg 'HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager' 'ShippedWithReserves' 0

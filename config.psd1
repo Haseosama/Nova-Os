@@ -203,5 +203,9 @@
 
     # Desactive l'integrite de la memoire (VBS/HVCI) : quelques % de FPS en plus,
     # mais moins de protection contre les logiciels malveillants. Desactive par defaut.
-    DisableVBS             = $false
+    DisableVBS             = $true
+
+    # Coupe l'indexation de recherche (service WSearch) : moins d'activite disque en fond, mais la
+    # recherche de fichiers dans Demarrer et l'Explorateur devient plus lente.
+    DisableSearchIndexing  = $true
 }
