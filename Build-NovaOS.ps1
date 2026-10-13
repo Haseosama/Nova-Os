@@ -273,10 +273,10 @@ function Save-Image([string] $Image, [string] $Destination, [int] $Width, [int] 
 
 # Remplace les fonds du programme d'installation (background*.bmp / .png) par l'image Nova-Os,
 # a la meme taille et dans le meme format que les originaux.
-function Update-SetupBackgrounds([string] $Dir, [string] $Image) {
+function Update-SetupBackgrounds([string] $Dir, [string] $Image, [string] $Pattern = 'background*') {
     Add-Type -AssemblyName System.Drawing
     $files = Get-ChildItem $Dir -File -ErrorAction SilentlyContinue |
-        Where-Object { $_.Name -like 'background*' -and $_.Extension -in '.bmp', '.png' }
+        Where-Object { $_.Name -like $Pattern -and $_.Extension -in '.bmp', '.png' }
     foreach ($file in $files) {
         $orig = [System.Drawing.Image]::FromFile($file.FullName)
         $w = $orig.Width; $h = $orig.Height
@@ -293,6 +293,8 @@ function Update-SetupImage([string] $Mount, [string] $Image, [bool] $LegacySetup
     # Ecran de chargement affiche avant le programme d'installation.
     Save-Image $Image (Join-Path $Mount 'Windows\System32\winpe.jpg') 1920 1080
     Write-Host '  - winpe.jpg (1920 x 1080)'
+    # Fond affiche par certaines versions de WinPE, s'il existe.
+    Update-SetupBackgrounds (Join-Path $Mount 'Windows\System32') $Image -Pattern 'setup*'
     if ($LegacySetup) {
         # Le nouveau programme d'installation (24H2+) ignore les fonds personnalises :
         # on lance directement l'ancien, qui affiche le fond Nova-Os et lit autounattend.xml.
