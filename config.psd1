@@ -157,9 +157,9 @@
             'XMediaRecode.XMediaRecode'         # XMedia Recode
         )
         # Fichiers de reponses Inno Setup (/LOADINF) pour installer avec des choix precis.
-        # K-Lite en mode complet : lance son installeur avec /SAVEINF="klcp.ini", choisis le profil complet et depose le fichier ici.
+        # K-Lite en mode complet : lance son installeur avec /unattended, choisis le profil complet et depose klcp_mega_unattended.ini ici.
         LoadInf = @{
-            'CodecGuide.K-LiteCodecPack.Mega' = 'D:\NovaOS\installers\klcp.ini'
+            'CodecGuide.K-LiteCodecPack.Mega' = 'D:\NovaOS\installers\klcp_mega_unattended.ini'
         }
         # Tes propres installeurs (.exe Inno Setup / NSIS, ou .msi) : depose-les dans ce dossier.
         Folder  = 'D:\NovaOS\installers'
