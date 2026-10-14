@@ -24,8 +24,8 @@
     30 % plus petite, mais compression nettement plus longue.
 
 .PARAMETER NoEdge
-    N'embarque pas les fichiers d'Edge (Edge, EdgeCore, EdgeUpdate) dans install.wim : environ
-    0,7 Go de moins. WebView2 est garde. Le dossier source n'est pas modifie.
+    N'embarque pas les fichiers d'Edge (Edge, EdgeCore) dans install.wim : environ
+    0,7 Go de moins. WebView2 et EdgeUpdate (ses mises a jour de securite) sont gardes. Le dossier source n'est pas modifie.
 
 .PARAMETER OriginalIso
     ISO Microsoft d'origine, pour recopier l'identite de l'edition (Pro...) dans install.wim si
@@ -114,7 +114,6 @@ if ($NoEdge) {
 \Windows\CSC
 \Program Files (x86)\Microsoft\Edge
 \Program Files (x86)\Microsoft\EdgeCore
-\Program Files (x86)\Microsoft\EdgeUpdate
 '@ | Set-Content $exclusions -Encoding Unicode
     $capture += "/ConfigFile:$exclusions"
     Write-Host '  Edge exclu de l''image (WebView2 garde)'
