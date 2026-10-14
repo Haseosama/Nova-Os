@@ -373,7 +373,9 @@ function Set-ThemeTweaks($Theme) {
     Set-RegString "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Themes" 'CurrentTheme' "$NovaDir\NovaOS.theme"
 
     # Barre des taches epuree : loupe de recherche seule, sans bouton Vue des taches.
-    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Search" 'SearchboxTaskbarMode' 1
+    # Pas d'icone de recherche dans la barre des taches : SearchHost et ses processus WebView2
+    # ne restent plus en memoire (la recherche marche toujours en tapant dans Demarrer).
+    Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Search" 'SearchboxTaskbarMode' 0
     Set-Reg "$DefaultUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" 'ShowTaskViewButton' 0
 
     if ($Theme.GlassEffects) {
