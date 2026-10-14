@@ -443,6 +443,21 @@ function Set-PerformanceTweaks {
     foreach ($service in 'TrkWks', 'WpcMonSvc', 'diagnosticshub.standardcollector.service') {
         Set-Reg "HKLM\SYSTEM\CurrentControlSet\Services\$service" 'Start' 4
     }
+    # Encore d'autres services sans usage sur un PC de bureau : rapports d'erreurs, assistant de
+    # compatibilite, paiement NFC et portefeuille, telephonie, point d'acces mobile, partage
+    # Windows Media Player, partage de ports .NET, AllJoyn, cartes a puce, capteurs.
+    foreach ($service in 'WerSvc', 'PcaSvc', 'WalletService', 'SEMgrSvc', 'PhoneSvc', 'icssvc',
+                         'WMPNetworkSvc', 'NetTcpPortSharing', 'AJRouter', 'SCardSvr', 'ScDeviceEnum',
+                         'SensorDataService', 'SensrSvc', 'SensorService') {
+        Set-Reg "HKLM\SYSTEM\CurrentControlSet\Services\$service" 'Start' 4
+    }
+    # Impression et Bluetooth : seulement si demande dans config.psd1.
+    if ($Config.DisablePrinting) { Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Services\Spooler' 'Start' 4 }
+    if ($Config.DisableBluetooth) {
+        foreach ($service in 'bthserv', 'BTAGService', 'BthAvctpSvc') {
+            Set-Reg "HKLM\SYSTEM\CurrentControlSet\Services\$service" 'Start' 4
+        }
+    }
     # Assistance a distance coupee.
     Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\Remote Assistance' 'fAllowToGetHelp' 0
     # Pas de telemetrie PowerShell ni .NET.

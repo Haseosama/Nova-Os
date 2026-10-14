@@ -191,6 +191,10 @@
     # des mises a jour en P2P, services inutiles coupes (fax, demo magasin, cartes, registre a
     # distance), demarrage sans delai, plus d'astuces ni de suggestions.
     PerformanceTweaks      = $true
+    # Coupe le service d'impression (mets $true si tu n'imprimes jamais, meme en PDF via une imprimante).
+    DisablePrinting        = $false
+    # Coupe le Bluetooth (mets $true si tu n'utilises ni manette, ni casque, ni souris Bluetooth).
+    DisableBluetooth       = $false
 
     # Coupe la veille prolongee et le demarrage rapide : libere la taille de la RAM sur C:
     # (hiberfil.sys). A mettre a $false sur un PC portable qui s'en sert.
