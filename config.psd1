@@ -41,9 +41,11 @@
         'Microsoft.WindowsFeedbackHub'
         'Microsoft.WindowsMaps'
         'Microsoft.WindowsSoundRecorder'
+        'Microsoft.Xbox.TCUI'
         'Microsoft.XboxGameOverlay'
         'Microsoft.XboxGamingOverlay'
         'Microsoft.XboxSpeechToTextOverlay'
+        'Microsoft.XboxIdentityProvider'
         'Microsoft.YourPhone'                # Mobile connecte
         'Microsoft.ZuneMusic'                # Lecteur multimedia
         'Microsoft.ZuneVideo'                # Films et TV
@@ -84,7 +86,7 @@
                            'Microsoft.Windows.WordPad', 'Browser.InternetExplorer',
                            'App.Support.QuickAssist', 'Hello.Face')
     # Conserves volontairement : Store, Calculatrice, Photos, Bloc-notes, Terminal, Paint, Capture d'ecran,
-    # Camera, et la connexion Xbox (XboxIdentityProvider, Xbox.TCUI) dont certains jeux PC ont besoin.
+    # Camera. Xbox retire entierement a la demande (2026-10-14).
 
     # Cle d'installation generique publique de Microsoft (Windows 11 Pro) : elle evite l'ecran
     # "cle de produit" pendant l'installation mais N'ACTIVE PAS Windows. Mets '' pour la retirer,

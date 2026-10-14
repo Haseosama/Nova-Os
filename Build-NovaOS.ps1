@@ -445,10 +445,11 @@ function Set-PerformanceTweaks {
     }
     # Encore d'autres services sans usage sur un PC de bureau : rapports d'erreurs, assistant de
     # compatibilite, paiement NFC et portefeuille, telephonie, point d'acces mobile, partage
-    # Windows Media Player, partage de ports .NET, AllJoyn, cartes a puce, capteurs.
+    # Windows Media Player, partage de ports .NET, AllJoyn, cartes a puce, capteurs, services Xbox.
     foreach ($service in 'WerSvc', 'PcaSvc', 'WalletService', 'SEMgrSvc', 'PhoneSvc', 'icssvc',
                          'WMPNetworkSvc', 'NetTcpPortSharing', 'AJRouter', 'SCardSvr', 'ScDeviceEnum',
-                         'SensorDataService', 'SensrSvc', 'SensorService') {
+                         'SensorDataService', 'SensrSvc', 'SensorService',
+                         'XblAuthManager', 'XblGameSave', 'XboxNetApiSvc', 'XboxGipSvc') {
         Set-Reg "HKLM\SYSTEM\CurrentControlSet\Services\$service" 'Start' 4
     }
     # Impression et Bluetooth : seulement si demande dans config.psd1.
