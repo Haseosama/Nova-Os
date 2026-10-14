@@ -1045,6 +1045,11 @@ ou passe son chemin avec -OscdimgPath.
 # ---------------------------------------------------------------------------
 
 $config     = Import-PowerShellDataFile $ConfigPath
+# Cle de licence personnelle, gardee hors du depot (jamais sur GitHub).
+if ($config.InstallKeyFile -and (Test-Path $config.InstallKeyFile)) {
+    $config.InstallKey = (Get-Content $config.InstallKeyFile -Raw).Trim()
+    Write-Host "Cle de produit lue depuis $($config.InstallKeyFile)"
+}
 if ($IsoPath) { $IsoPath = (Resolve-Path $IsoPath).Path }
 $oscdimg    = Find-Oscdimg $OscdimgPath
 $isoDir     = Join-Path $WorkDir 'iso'

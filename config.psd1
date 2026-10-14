@@ -90,6 +90,9 @@
     # "cle de produit" pendant l'installation mais N'ACTIVE PAS Windows. Mets '' pour la retirer,
     # ou la cle generique de ton edition si tu gardes une autre edition que Pro.
     InstallKey = 'VK7JG-NPHTM-C97JM-9MPGT-3V66T'
+    # Ta propre cle (une ligne XXXXX-XXXXX-XXXXX-XXXXX-XXXXX) : si ce fichier existe, elle remplace
+    # la cle generique et active Windows a l'installation. Le fichier reste sur ton PC, hors du depot.
+    InstallKeyFile = 'D:\NovaOS\installers\productkey.txt'
 
     # Installation sur PC sans TPM 2.0 / Secure Boot / 4 Go de RAM / CPU supporte.
     BypassHardwareChecks   = $true
