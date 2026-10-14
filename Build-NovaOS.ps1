@@ -405,6 +405,10 @@ function Set-PerformanceTweaks {
     # Edge ne reste plus en memoire une fois ferme, ni pre-lance au demarrage.
     Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Edge' 'StartupBoostEnabled' 0
     Set-Reg 'HKLM\SOFTWARE\Policies\Microsoft\Edge' 'BackgroundModeEnabled' 0
+    # Brave non plus ne reste pas en memoire une fois ferme.
+    Set-Reg 'HKLM\SOFTWARE\Policies\BraveSoftware\Brave' 'BackgroundModeEnabled' 0
+    # Services Windows regroupes dans moins de processus svchost (moins de RAM au repos).
+    Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control' 'SvcHostSplitThresholdInKB' 67108864
     # Pas de bridage des processus en arriere-plan (Power Throttling).
     Set-Reg 'HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling' 'PowerThrottlingOff' 1
     # NTFS n'ecrit plus la date du dernier acces a chaque lecture de fichier.
