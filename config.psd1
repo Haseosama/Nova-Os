@@ -112,9 +112,6 @@
     # Desactive Copilot par strategie.
     DisableCopilot         = $true
 
-    # Libere les ~7 Go de "stockage reserve" pour les mises a jour.
-    DisableReservedStorage = $true
-
     # OneDrive ne s'installe plus a la premiere connexion.
     RemoveOneDrive         = $true
 
