@@ -19,6 +19,10 @@
 .PARAMETER NovaOS
     Applique en plus les reglages Nova-Os (config.psd1) avec Build-NovaOS.ps1.
 
+.PARAMETER Esd
+    Recompresse install.wim en install.esd (compression maximale « recovery ») : ISO environ
+    30 % plus petite, mais compression nettement plus longue.
+
 .PARAMETER OriginalIso
     ISO Microsoft d'origine, pour recopier l'identite de l'edition (Pro...) dans install.wim si
     DISM ne l'a pas fait et que le dossier n'a pas de image.xml.
@@ -32,6 +36,7 @@ param(
     [string] $OutputIso = 'D:\NovaOS\Nova-Os-source.iso',
     [string] $WorkDir = 'D:\NovaOS\work-source',
     [switch] $NovaOS,
+    [switch] $Esd,
     [string] $OriginalIso,
     [string] $OscdimgPath
 )
@@ -119,6 +124,14 @@ if ($info.EditionId -and $captured.EditionId -ne $info.EditionId) {
     if ($captured.EditionId -ne $info.EditionId) {
         throw "install.wim n'a pas d'edition ($($captured.EditionId)) : l'installation ne proposerait aucune image. Relance avec -OriginalIso <ISO Microsoft d'origine>."
     }
+}
+
+if ($Esd) {
+    Write-Step 'Recompression en install.esd (ISO plus petite) : etape longue'
+    $wimPath = Join-Path $sources 'install.wim'
+    Invoke-Dism @('/Export-Image', "/SourceImageFile:$wimPath", '/SourceIndex:1',
+                  "/DestinationImageFile:$(Join-Path $sources 'install.esd')", '/Compress:recovery', '/CheckIntegrity')
+    Remove-Item $wimPath -Force
 }
 
 if ($NovaOS) {
