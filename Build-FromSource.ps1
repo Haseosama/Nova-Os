@@ -23,6 +23,10 @@
     Recompresse install.wim en install.esd (compression maximale « recovery ») : ISO environ
     30 % plus petite, mais compression nettement plus longue.
 
+.PARAMETER NoEdge
+    N'embarque pas les fichiers d'Edge (Edge, EdgeCore, EdgeUpdate) dans install.wim : environ
+    0,7 Go de moins. WebView2 est garde. Le dossier source n'est pas modifie.
+
 .PARAMETER OriginalIso
     ISO Microsoft d'origine, pour recopier l'identite de l'edition (Pro...) dans install.wim si
     DISM ne l'a pas fait et que le dossier n'a pas de image.xml.
@@ -37,6 +41,7 @@ param(
     [string] $WorkDir = 'D:\NovaOS\work-source',
     [switch] $NovaOS,
     [switch] $Esd,
+    [switch] $NoEdge,
     [string] $OriginalIso,
     [string] $OscdimgPath
 )
@@ -94,6 +99,26 @@ Invoke-Dism @('/Append-Image', "/ImageFile:$bootWim", "/CaptureDir:$(Join-Path $
 Write-Step "Compression de install.wim ($($info.Edition)) : c'est la plus longue etape"
 $capture = @('/Capture-Image', "/ImageFile:$(Join-Path $sources 'install.wim')", "/CaptureDir:$(Join-Path $Source 'windows')",
              "/Name:$($info.Edition)", "/Description:$($info.Description)", '/Compress:max')
+if ($NoEdge) {
+    # Liste d'exclusion DISM : les exclusions par defaut de Windows, plus les dossiers d'Edge.
+    $exclusions = Join-Path $WorkDir 'WimScript.ini'
+    @'
+[ExclusionList]
+\$ntfs.log
+\hiberfil.sys
+\pagefile.sys
+\swapfile.sys
+\System Volume Information
+\RECYCLER
+\$Recycle.Bin
+\Windows\CSC
+\Program Files (x86)\Microsoft\Edge
+\Program Files (x86)\Microsoft\EdgeCore
+\Program Files (x86)\Microsoft\EdgeUpdate
+'@ | Set-Content $exclusions -Encoding Unicode
+    $capture += "/ConfigFile:$exclusions"
+    Write-Host '  Edge exclu de l''image (WebView2 garde)'
+}
 Invoke-Dism $capture
 
 # DISM lit l'edition (Professional...) dans le registre de l'image : le programme d'installation

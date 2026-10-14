@@ -760,6 +760,11 @@ if ($removeEdge) {
     }
     
     Remove-Item "`$env:PUBLIC\Desktop\Microsoft Edge.lnk", "`$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
+    # ISO construite sans les fichiers d'Edge (Build-FromSource -NoEdge) : on retire l'entree orpheline
+    # de la liste des applications installees.
+    if (-not (Test-Path "`${env:ProgramFiles(x86)}\Microsoft\Edge\Application")) {
+        Remove-Item 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge' -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }
 "@ | Set-Content (Join-Path $Dir 'UserApps.ps1') -Encoding UTF8
 
