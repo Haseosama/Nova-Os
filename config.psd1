@@ -38,6 +38,7 @@
         'Microsoft.Windows.Ai.Copilot.Provider'
         'Microsoft.Windows.DevHome'
         'Microsoft.WindowsAlarms'            # Horloge
+        'Microsoft.WindowsCamera'            # Camera (pas de webcam)
         'Microsoft.WindowsFeedbackHub'
         'Microsoft.WindowsMaps'
         'Microsoft.WindowsSoundRecorder'
@@ -86,7 +87,7 @@
                            'Microsoft.Windows.WordPad', 'Browser.InternetExplorer',
                            'App.Support.QuickAssist', 'Hello.Face')
     # Conserves volontairement : Store, Calculatrice, Photos, Bloc-notes, Terminal, Paint, Capture d'ecran,
-    # Camera. Xbox retire entierement a la demande (2026-10-14).
+    # Xbox et Camera retires a la demande a la demande (2026-10-14).
 
     # Cle d'installation generique publique de Microsoft (Windows 11 Pro) : elle evite l'ecran
     # "cle de produit" pendant l'installation mais N'ACTIVE PAS Windows. Mets '' pour la retirer,
