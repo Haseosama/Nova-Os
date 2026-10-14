@@ -202,6 +202,10 @@
     # (hiberfil.sys). A mettre a $false sur un PC portable qui s'en sert.
     DisableHibernation     = $true
 
+    # Rend les ~7 Go que Windows reserve sur C: pour ses mises a jour (Windows Update reste actif ;
+    # il faut juste un peu de place libre sur C: au moment des grosses mises a jour).
+    DisableReservedStorage = $true
+
     # Nettoie le magasin de composants (WinSxS) a la fin de l'installation : 1 a 2 Go gagnes,
     # mais l'installation de Windows dure 5 a 10 minutes de plus.
     CleanupComponents      = $true

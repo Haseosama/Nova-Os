@@ -776,6 +776,7 @@ if ($removeEdge) {
     # Specialize.ps1 : lance par autounattend.xml pendant l'installation, avant la creation du compte.
     $power = if ($Config.UltimatePerformance) { '$true' } else { '$false' }
     $hibernate = if ($Config.DisableHibernation) { '$true' } else { '$false' }
+    $reserved = if ($Config.DisableReservedStorage) { '$true' } else { '$false' }
     $cleanup = if ($Config.CleanupComponents) { '$true' } else { '$false' }
     $features = ($Config.RemoveFeatures | ForEach-Object { "'$_'" }) -join ', '
     $capabilities = ($Config.RemoveCapabilities | ForEach-Object { "'$_'" }) -join ', '
@@ -914,6 +915,12 @@ if ($power) {
 if ($hibernate) {
     Write-Output '== Veille prolongee et demarrage rapide desactives (hiberfil.sys supprime)'
     powercfg /hibernate off
+    Write-Output "  code `$LASTEXITCODE"
+}
+
+if ($reserved) {
+    Write-Output '== Stockage reserve desactive (environ 7 Go rendus, Windows Update reste actif)'
+    Dism.exe /Online /Set-ReservedStorageState /State:Disabled /Quiet
     Write-Output "  code `$LASTEXITCODE"
 }
 
