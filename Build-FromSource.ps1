@@ -129,8 +129,20 @@ if ($info.EditionId -and $captured.EditionId -ne $info.EditionId) {
 if ($Esd) {
     Write-Step 'Recompression en install.esd (ISO plus petite) : etape longue'
     $wimPath = Join-Path $sources 'install.wim'
+    $esdPath = Join-Path $sources 'install.esd'
+    $identity = Get-WimImageXml $wimPath 1
     Invoke-Dism @('/Export-Image', "/SourceImageFile:$wimPath", '/SourceIndex:1',
-                  "/DestinationImageFile:$(Join-Path $sources 'install.esd')", '/Compress:recovery', '/CheckIntegrity')
+                  "/DestinationImageFile:$esdPath", '/Compress:recovery', '/CheckIntegrity')
+    # L'export doit garder l'edition, sinon le programme d'installation ne propose aucune image.
+    $exported = Get-WindowsImage -ImagePath $esdPath -Index 1
+    if ($info.EditionId -and $exported.EditionId -ne $info.EditionId) {
+        Restore-WimImageIdentity $esdPath 1 $identity
+        $exported = Get-WindowsImage -ImagePath $esdPath -Index 1
+    }
+    Write-Host "  Edition : $($exported.EditionId), $([math]::Round((Get-Item $esdPath).Length / 1GB, 2)) Go"
+    if ($info.EditionId -and $exported.EditionId -ne $info.EditionId) {
+        throw "install.esd n'a pas d'edition ($($exported.EditionId)) : l'installation ne proposerait aucune image."
+    }
     Remove-Item $wimPath -Force
 }
 
