@@ -760,6 +760,14 @@ if ($removeEdge) {
     }
     
     Remove-Item "`$env:PUBLIC\Desktop\Microsoft Edge.lnk", "`$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
+    # Raccourcis du compte et entree "Microsoft Edge" (paquet d'appli) qui restent sinon dans Demarrer.
+    Remove-Item "`$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk", "`$env:USERPROFILE\Desktop\Microsoft Edge.lnk", "`$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\Microsoft Edge.lnk" -Force -ErrorAction SilentlyContinue
+    if (`$setup -or -not (Test-Path "`${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe")) {
+        Get-AppxPackage -AllUsers -Name 'Microsoft.MicrosoftEdge.Stable' | ForEach-Object {
+            try { Remove-AppxPackage -Package `$_.PackageFullName -AllUsers -ErrorAction Stop; Add-Content '$NovaDir\UserApps.log' "`$(Get-Date -Format s) paquet Edge retire" }
+            catch { Add-Content '$NovaDir\UserApps.log' "`$(Get-Date -Format s) paquet Edge : `$(`$_.Exception.Message)" }
+        }
+    }
     # ISO construite sans les fichiers d'Edge (Build-FromSource -NoEdge) : on retire l'entree orpheline
     # de la liste des applications installees.
     if (-not (Test-Path "`${env:ProgramFiles(x86)}\Microsoft\Edge\Application")) {
